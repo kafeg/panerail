@@ -84,9 +84,9 @@ public final class RailCoordinator: ObservableObject {
                 isEnabled: preferences.isEnabled,
                 isAccessibilityTrusted: isTrusted(),
                 bundleIdentifier: app.bundleIdentifier,
-                windowCount: newItems.count,
+                itemCount: newItems.count,
                 mode: preferences.mode,
-                minimumWindows: preferences.minimumWindows,
+                minimumItems: preferences.minimumWindows,
                 listedBundleIDs: Set(preferences.listedBundleIDs)
             )
         )

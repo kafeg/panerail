@@ -66,6 +66,9 @@ public final class Preferences: ObservableObject {
 
     /// Whether apps that keep their own internal states — Vivaldi's workspaces,
     /// for instance — show those instead of their windows.
+    ///
+    /// Off by default: it leans on undocumented internals of the app in
+    /// question and can break when that app updates.
     @Published public var appSpecificProviders: Bool {
         didSet { defaults.set(appSpecificProviders, forKey: Key.appSpecificProviders) }
     }
@@ -105,7 +108,7 @@ public final class Preferences: ObservableObject {
         mode = (defaults.string(forKey: Key.mode).flatMap(RailMode.init(rawValue:))) ?? .allApps
         storedMinimumWindows = max(1, defaults.object(forKey: Key.minimumWindows) as? Int ?? 2)
         listedBundleIDs = defaults.stringArray(forKey: Key.listedBundleIDs) ?? []
-        appSpecificProviders = defaults.object(forKey: Key.appSpecificProviders) as? Bool ?? true
+        appSpecificProviders = defaults.object(forKey: Key.appSpecificProviders) as? Bool ?? false
         storedWidth = min(
             max(defaults.object(forKey: Key.width) as? Double ?? Self.defaultWidth, Self.minimumWidth),
             Self.maximumWidth

@@ -13,17 +13,17 @@ public enum RailGeometry {
     public static let screenMargin: CGFloat = 24
 
     /// Long window lists scroll rather than growing a panel taller than the screen.
-    public static func visibleRowCount(for windowCount: Int, maxRows: Int = maxVisibleRows) -> Int {
-        guard windowCount > 0 else { return 0 }
-        return min(windowCount, max(1, maxRows))
+    public static func visibleRowCount(for itemCount: Int, maxRows: Int = maxVisibleRows) -> Int {
+        guard itemCount > 0 else { return 0 }
+        return min(itemCount, max(1, maxRows))
     }
 
     public static func panelSize(
-        windowCount: Int,
+        itemCount: Int,
         width: CGFloat,
         maxRows: Int = maxVisibleRows
     ) -> CGSize {
-        let rows = visibleRowCount(for: windowCount, maxRows: maxRows)
+        let rows = visibleRowCount(for: itemCount, maxRows: maxRows)
         let height = headerHeight + dividerHeight + CGFloat(rows) * rowHeight + verticalPadding * 2
         return CGSize(width: width, height: height)
     }

@@ -5,19 +5,19 @@ final class RailGeometryTests: XCTestCase {
     private let screen = CGRect(x: 0, y: 0, width: 1440, height: 850)
 
     func testHeightGrowsWithWindowCount() {
-        let two = RailGeometry.panelSize(windowCount: 2, width: 220)
-        let five = RailGeometry.panelSize(windowCount: 5, width: 220)
+        let two = RailGeometry.panelSize(itemCount: 2, width: 220)
+        let five = RailGeometry.panelSize(itemCount: 5, width: 220)
         XCTAssertEqual(five.height - two.height, RailGeometry.rowHeight * 3, accuracy: 0.001)
     }
 
     func testWidthIsPassedThrough() {
-        XCTAssertEqual(RailGeometry.panelSize(windowCount: 3, width: 260).width, 260)
+        XCTAssertEqual(RailGeometry.panelSize(itemCount: 3, width: 260).width, 260)
     }
 
     /// Beyond the cap the list scrolls, so the panel must stop growing.
     func testHeightIsCappedAtMaxVisibleRows() {
-        let capped = RailGeometry.panelSize(windowCount: 40, width: 220)
-        let atCap = RailGeometry.panelSize(windowCount: RailGeometry.maxVisibleRows, width: 220)
+        let capped = RailGeometry.panelSize(itemCount: 40, width: 220)
+        let atCap = RailGeometry.panelSize(itemCount: RailGeometry.maxVisibleRows, width: 220)
         XCTAssertEqual(capped.height, atCap.height)
     }
 

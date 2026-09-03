@@ -23,36 +23,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let pollInterval: TimeInterval = 0.7
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let dark = CommandLine.arguments.contains("--dark")
-
-        if let index = CommandLine.arguments.firstIndex(of: "--render-live"),
-           let bundleID = CommandLine.arguments[safe: index + 1],
-           let path = CommandLine.arguments[safe: index + 2] {
-            let ok = PreviewRenderer.renderLive(bundleIdentifier: bundleID, to: path, dark: dark)
-            NSApp.terminate(nil)
-            exit(ok ? 0 : 1)
-        }
-
-        if let index = CommandLine.arguments.firstIndex(of: "--render-preview"),
-           let path = CommandLine.arguments[safe: index + 1] {
-            let ok = PreviewRenderer.render(to: path, dark: dark)
-            NSApp.terminate(nil)
-            exit(ok ? 0 : 1)
-        }
-
-        if let index = CommandLine.arguments.firstIndex(of: "--render-settings"),
-           let path = CommandLine.arguments[safe: index + 1] {
-            let ok = PreviewRenderer.renderSettings(to: path, dark: dark)
-            NSApp.terminate(nil)
-            exit(ok ? 0 : 1)
-        }
-
-        if let index = CommandLine.arguments.firstIndex(of: "--probe-vivaldi-live") {
-            let path = CommandLine.arguments[safe: index + 1]
-                ?? NSTemporaryDirectory() + "panerail-vivaldi-live.txt"
-            VivaldiProbe.live(reportPath: path)
-            exit(0)
-        }
+        // Screenshot and diagnostic entry points; none of them return.
+        _ = DeveloperCommands.runIfRequested(preferences: preferences)
 
         let demo = isDemo
         let source: WindowSource = demo ? DemoData.makeSource() : AXWindowSource()

@@ -60,11 +60,4 @@ public enum WindowTitle {
         return app.isEmpty ? untitled : app
     }
 
-    /// Tail-truncation for places that cannot rely on the layout to elide,
-    /// such as `NSMenuItem` titles.
-    public static func shortened(_ title: String, limit: Int) -> String {
-        guard limit > 0 else { return "" }
-        guard title.count > limit else { return title }
-        return String(title.prefix(max(limit - 1, 0))) + "\u{2026}"
-    }
 }

@@ -6,18 +6,18 @@ final class RailVisibilityTests: XCTestCase {
         isEnabled: Bool = true,
         isTrusted: Bool = true,
         bundleID: String? = "com.example.editor",
-        windowCount: Int = 3,
+        itemCount: Int = 3,
         mode: RailMode = .allApps,
-        minimumWindows: Int = 2,
+        minimumItems: Int = 2,
         listed: Set<String> = []
     ) -> RailVisibilityInput {
         RailVisibilityInput(
             isEnabled: isEnabled,
             isAccessibilityTrusted: isTrusted,
             bundleIdentifier: bundleID,
-            windowCount: windowCount,
+            itemCount: itemCount,
             mode: mode,
-            minimumWindows: minimumWindows,
+            minimumItems: minimumItems,
             listedBundleIDs: listed
         )
     }
@@ -50,20 +50,20 @@ final class RailVisibilityTests: XCTestCase {
     }
 
     func testWindowCountThreshold() {
-        XCTAssertFalse(RailVisibility.shouldShow(input(windowCount: 1, minimumWindows: 2)))
-        XCTAssertTrue(RailVisibility.shouldShow(input(windowCount: 2, minimumWindows: 2)))
+        XCTAssertFalse(RailVisibility.shouldShow(input(itemCount: 1, minimumItems: 2)))
+        XCTAssertTrue(RailVisibility.shouldShow(input(itemCount: 2, minimumItems: 2)))
     }
 
     func testSingleWindowModeStillNeedsAWindow() {
-        XCTAssertTrue(RailVisibility.shouldShow(input(windowCount: 1, minimumWindows: 1)))
-        XCTAssertFalse(RailVisibility.shouldShow(input(windowCount: 0, minimumWindows: 1)))
+        XCTAssertTrue(RailVisibility.shouldShow(input(itemCount: 1, minimumItems: 1)))
+        XCTAssertFalse(RailVisibility.shouldShow(input(itemCount: 0, minimumItems: 1)))
     }
 
     /// A stored zero or negative threshold must not turn into "show for apps
     /// with no windows at all".
     func testThresholdBelowOneIsTreatedAsOne() {
-        XCTAssertFalse(RailVisibility.shouldShow(input(windowCount: 0, minimumWindows: 0)))
-        XCTAssertTrue(RailVisibility.shouldShow(input(windowCount: 1, minimumWindows: -5)))
+        XCTAssertFalse(RailVisibility.shouldShow(input(itemCount: 0, minimumItems: 0)))
+        XCTAssertTrue(RailVisibility.shouldShow(input(itemCount: 1, minimumItems: -5)))
     }
 
     func testListedModeOnlyShowsSelectedApps() {
@@ -76,7 +76,7 @@ final class RailVisibilityTests: XCTestCase {
 
     func testListedModeStillRespectsThreshold() {
         XCTAssertFalse(RailVisibility.shouldShow(
-            input(windowCount: 1, mode: .listedApps, minimumWindows: 2, listed: ["com.example.editor"])
+            input(itemCount: 1, mode: .listedApps, minimumItems: 2, listed: ["com.example.editor"])
         ))
     }
 }

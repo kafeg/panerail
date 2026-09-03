@@ -39,14 +39,18 @@ final class RailProviderSelectionTests: XCTestCase {
 
     private let pid: pid_t = 77
 
+    /// App-specific providers are opt-in, so tests that exercise one have to
+    /// switch it on the way a user would.
     private func makeCoordinator(
         windows: [String],
-        special: StubProvider?
+        special: StubProvider?,
+        appSpecificProviders: Bool = true
     ) -> (RailCoordinator, Preferences) {
         let source = FakeWindowSource(windowsByPID: [
             pid: windows.enumerated().map { WindowInfo(id: UInt64($0.offset + 1), title: $0.element) },
         ])
         let preferences = Preferences(defaults: defaults)
+        preferences.appSpecificProviders = appSpecificProviders
         let coordinator = RailCoordinator(
             windowProvider: WindowRailProvider(source: source),
             appSpecificProviders: special.map { [$0] } ?? [],
@@ -82,6 +86,19 @@ final class RailProviderSelectionTests: XCTestCase {
         let special = StubProvider(claims: "com.example.browser", rows: [RailItem(id: 10, title: "Work")])
         let (coordinator, preferences) = makeCoordinator(windows: ["window a", "window b"], special: special)
         preferences.appSpecificProviders = false
+
+        coordinator.setFrontmost(app("com.example.browser"))
+        XCTAssertEqual(coordinator.items.map(\.title), ["window a", "window b"])
+    }
+
+    /// The feature rests on undocumented internals of other apps, so a user who
+    /// has never touched the setting must get plain window switching.
+    func testAppSpecificProvidersAreIgnoredUntilSwitchedOn() {
+        let special = StubProvider(claims: "com.example.browser", rows: [RailItem(id: 10, title: "Work")])
+        let (coordinator, preferences) = makeCoordinator(
+            windows: ["window a", "window b"], special: special, appSpecificProviders: false
+        )
+        XCTAssertFalse(preferences.appSpecificProviders, "the default, not something the test set")
 
         coordinator.setFrontmost(app("com.example.browser"))
         XCTAssertEqual(coordinator.items.map(\.title), ["window a", "window b"])

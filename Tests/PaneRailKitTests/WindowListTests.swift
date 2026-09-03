@@ -62,23 +62,6 @@ final class WindowListTests: XCTestCase {
         XCTAssertTrue(result[0].isFocused)
     }
 
-    // MARK: - Title shortening
-
-    func testShortenedLeavesShortTitlesAlone() {
-        XCTAssertEqual(WindowTitle.shortened("README.md", limit: 20), "README.md")
-    }
-
-    func testShortenedTruncatesWithAnEllipsis() {
-        let result = WindowTitle.shortened("a very long window title indeed", limit: 10)
-        XCTAssertEqual(result.count, 10)
-        XCTAssertTrue(result.hasSuffix("\u{2026}"))
-    }
-
-    func testShortenedHandlesDegenerateLimits() {
-        XCTAssertEqual(WindowTitle.shortened("title", limit: 0), "")
-        XCTAssertEqual(WindowTitle.shortened("title", limit: -1), "")
-    }
-
     /// Equality drives SwiftUI's diffing; a re-read of the same window must not
     /// register as a change just because the AX element is a new object.
     func testEqualityIgnoresHandles() {

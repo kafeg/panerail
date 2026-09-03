@@ -16,7 +16,7 @@ enum PreviewRenderer {
         coordinator.setFrontmost(DemoData.app)
 
         let railSize = RailGeometry.panelSize(
-            windowCount: coordinator.items.count,
+            itemCount: coordinator.items.count,
             width: CGFloat(preferences.width)
         )
 
@@ -94,7 +94,7 @@ enum PreviewRenderer {
                 onSelect: { _ in }
             ),
             size: RailGeometry.panelSize(
-                windowCount: coordinator.items.count,
+                itemCount: coordinator.items.count,
                 width: CGFloat(preferences.width)
             ),
             dark: dark,
@@ -114,7 +114,7 @@ enum PreviewRenderer {
         )
         .padding(14)
 
-        let size = CGSize(width: 500, height: 360)
+        let size = CGSize(width: 500, height: 410)
         let hosting = NSHostingView(rootView: view)
         hosting.frame = CGRect(origin: .zero, size: size)
 

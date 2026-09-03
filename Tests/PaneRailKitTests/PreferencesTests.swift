@@ -30,6 +30,10 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(preferences.width, Preferences.defaultWidth)
         XCTAssertTrue(preferences.listedBundleIDs.isEmpty)
         XCTAssertNil(preferences.savedOrigin)
+        XCTAssertFalse(
+            preferences.appSpecificProviders,
+            "app-specific states lean on undocumented internals, so they are opt-in"
+        )
     }
 
     func testValuesSurviveARestart() {
@@ -39,6 +43,7 @@ final class PreferencesTests: XCTestCase {
         first.minimumWindows = 4
         first.width = 300
         first.addListed("com.example.editor")
+        first.appSpecificProviders = true
         first.savedOrigin = CGPoint(x: 120, y: 640)
 
         let second = makePreferences()
@@ -47,6 +52,7 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(second.minimumWindows, 4)
         XCTAssertEqual(second.width, 300)
         XCTAssertEqual(second.listedBundleIDs, ["com.example.editor"])
+        XCTAssertTrue(second.appSpecificProviders)
         XCTAssertEqual(second.savedOrigin, CGPoint(x: 120, y: 640))
     }
 

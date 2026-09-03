@@ -43,7 +43,7 @@ final class RailWindowController {
         )
         .receive(on: RunLoop.main)
         .sink { [weak self] items, isVisible, width, _ in
-            self?.apply(windowCount: items.count, isVisible: isVisible, width: width)
+            self?.apply(itemCount: items.count, isVisible: isVisible, width: width)
         }
         .store(in: &cancellables)
 
@@ -65,13 +65,13 @@ final class RailWindowController {
         }
     }
 
-    private func apply(windowCount: Int, isVisible: Bool, width: Double) {
-        let size = RailGeometry.panelSize(windowCount: windowCount, width: CGFloat(width))
+    private func apply(itemCount: Int, isVisible: Bool, width: Double) {
+        let size = RailGeometry.panelSize(itemCount: itemCount, width: CGFloat(width))
         isAdjustingFrame = true
         panel.setFrame(targetFrame(for: size), display: true)
         isAdjustingFrame = false
 
-        setVisible(isVisible && windowCount > 0)
+        setVisible(isVisible && itemCount > 0)
     }
 
     private func setVisible(_ visible: Bool) {
