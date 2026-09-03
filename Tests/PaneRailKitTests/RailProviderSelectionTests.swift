@@ -6,6 +6,8 @@ private final class StubProvider: RailItemProvider {
     let claims: String
     let rows: [RailItem]
     private(set) var activated: [RailItem] = []
+    /// Lets a test assert that a ruled-out app was never even asked.
+    private(set) var itemRequests = 0
 
     init(claims bundleID: String, rows: [RailItem]) {
         self.claims = bundleID
@@ -13,7 +15,10 @@ private final class StubProvider: RailItemProvider {
     }
 
     func supports(_ app: FrontmostApp) -> Bool { app.bundleIdentifier == claims }
-    func items(for app: FrontmostApp) -> [RailItem] { rows }
+    func items(for app: FrontmostApp) -> [RailItem] {
+        itemRequests += 1
+        return rows
+    }
 
     func activate(_ item: RailItem, in app: FrontmostApp) -> Bool {
         activated.append(item)
@@ -112,6 +117,37 @@ final class RailProviderSelectionTests: XCTestCase {
         coordinator.setFrontmost(app("com.example.browser"))
         XCTAssertTrue(coordinator.select(coordinator.items[0]))
         XCTAssertEqual(special.activated.map(\.id), [10])
+    }
+
+    /// The Apps allow list is the outer gate: an app-specific provider must not
+    /// smuggle an app past it just because the app has states to show.
+    func testAllowListOutranksAppSpecificProviders() {
+        let special = StubProvider(claims: "com.example.browser", rows: [
+            RailItem(id: 10, title: "Work"),
+            RailItem(id: 11, title: "Home"),
+        ])
+        let (coordinator, preferences) = makeCoordinator(windows: ["a", "b"], special: special)
+        preferences.mode = .listedApps
+        preferences.listedBundleIDs = ["com.example.editor"]
+
+        coordinator.setFrontmost(app("com.example.browser"))
+        XCTAssertFalse(coordinator.isVisible)
+        XCTAssertTrue(coordinator.items.isEmpty)
+        XCTAssertEqual(special.itemRequests, 0, "a ruled-out app should not be inspected at all")
+    }
+
+    func testAllowListedAppStillGetsItsProvider() {
+        let special = StubProvider(claims: "com.example.browser", rows: [
+            RailItem(id: 10, title: "Work"),
+            RailItem(id: 11, title: "Home"),
+        ])
+        let (coordinator, preferences) = makeCoordinator(windows: ["a", "b"], special: special)
+        preferences.mode = .listedApps
+        preferences.listedBundleIDs = ["com.example.browser"]
+
+        coordinator.setFrontmost(app("com.example.browser"))
+        XCTAssertTrue(coordinator.isVisible)
+        XCTAssertEqual(coordinator.items.map(\.title), ["Work", "Home"])
     }
 
     func testSwitchingAppsSwitchesProviders() {

@@ -44,10 +44,19 @@ public enum RailVisibility {
     ]
 
     public static func shouldShow(_ input: RailVisibilityInput) -> Bool {
+        guard isEligible(input) else { return false }
+        return input.itemCount >= max(1, input.minimumItems)
+    }
+
+    /// Everything the decision depends on except how many rows there are.
+    ///
+    /// Separated so a caller can rule an app out before doing the work of
+    /// collecting its rows: an app the user has not ticked can never show the
+    /// rail, whatever a provider would have found for it.
+    public static func isEligible(_ input: RailVisibilityInput) -> Bool {
         guard input.isEnabled, input.isAccessibilityTrusted else { return false }
         guard let bundleID = input.bundleIdentifier, !bundleID.isEmpty else { return false }
         guard !input.excludedBundleIDs.contains(bundleID) else { return false }
-        guard input.itemCount >= max(1, input.minimumItems) else { return false }
 
         switch input.mode {
         case .allApps:

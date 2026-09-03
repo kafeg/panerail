@@ -73,23 +73,31 @@ public final class RailCoordinator: ObservableObject {
             return
         }
 
+        // The allow list outranks everything a provider might offer, so an app
+        // that is ruled out is never asked for its rows at all.
+        let input = RailVisibilityInput(
+            isEnabled: preferences.isEnabled,
+            isAccessibilityTrusted: isTrusted(),
+            bundleIdentifier: app.bundleIdentifier,
+            itemCount: 0,
+            mode: preferences.mode,
+            minimumItems: preferences.minimumWindows,
+            listedBundleIDs: Set(preferences.listedBundleIDs)
+        )
+        guard RailVisibility.isEligible(input) else {
+            if !items.isEmpty { items = [] }
+            if isVisible { isVisible = false }
+            activeProvider = nil
+            return
+        }
+
         let provider = provider(for: app)
         activeProvider = provider
 
-        let newItems = isTrusted() ? provider.items(for: app) : []
+        let newItems = provider.items(for: app)
         if newItems != items { items = newItems }
 
-        let visible = RailVisibility.shouldShow(
-            RailVisibilityInput(
-                isEnabled: preferences.isEnabled,
-                isAccessibilityTrusted: isTrusted(),
-                bundleIdentifier: app.bundleIdentifier,
-                itemCount: newItems.count,
-                mode: preferences.mode,
-                minimumItems: preferences.minimumWindows,
-                listedBundleIDs: Set(preferences.listedBundleIDs)
-            )
-        )
+        let visible = newItems.count >= max(1, preferences.minimumWindows)
         if visible != isVisible { isVisible = visible }
     }
 

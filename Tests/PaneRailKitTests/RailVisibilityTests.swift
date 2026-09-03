@@ -74,6 +74,20 @@ final class RailVisibilityTests: XCTestCase {
         ))
     }
 
+    /// Eligibility is the half of the rule that does not need a row count, so a
+    /// caller can skip collecting rows for an app that is ruled out anyway.
+    func testEligibilityIgnoresTheRowCount() {
+        XCTAssertTrue(RailVisibility.isEligible(input(itemCount: 0)))
+        XCTAssertFalse(RailVisibility.isEligible(input(isEnabled: false, itemCount: 99)))
+        XCTAssertFalse(RailVisibility.isEligible(input(bundleID: "dev.kafeg.panerail", itemCount: 99)))
+        XCTAssertFalse(RailVisibility.isEligible(
+            input(itemCount: 99, mode: .listedApps, listed: ["com.example.other"])
+        ))
+        XCTAssertTrue(RailVisibility.isEligible(
+            input(itemCount: 0, mode: .listedApps, listed: ["com.example.editor"])
+        ))
+    }
+
     func testListedModeStillRespectsThreshold() {
         XCTAssertFalse(RailVisibility.shouldShow(
             input(itemCount: 1, mode: .listedApps, minimumItems: 2, listed: ["com.example.editor"])
