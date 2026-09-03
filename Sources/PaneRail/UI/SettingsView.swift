@@ -101,6 +101,16 @@ struct GeneralSettingsView: View {
                 }
 
                 GridRow {
+                    label("App states")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle("Prefer an app's own states", isOn: $preferences.appSpecificProviders)
+                        Text("Vivaldi shows its workspaces instead of windows.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                GridRow {
                     label("Width")
                     HStack(spacing: 8) {
                         Slider(
@@ -222,6 +232,11 @@ struct AppsSettingsView: View {
 }
 
 struct OnboardingView: View {
+    /// Triggering the system alert is left to the caller so that this window
+    /// can step aside at the same moment: two competing permission dialogs on
+    /// screen is how a stale one gets left behind for the user to mis-click.
+    let onRequestAccess: () -> Void
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
@@ -263,7 +278,7 @@ struct OnboardingView: View {
 
             HStack {
                 Spacer()
-                Button("Open System Settings") { AccessibilityAuthorizer.openSystemSettings() }
+                Button("Open System Settings", action: onRequestAccess)
                     .keyboardShortcut(.defaultAction)
             }
         }

@@ -29,21 +29,21 @@ final class RailWindowController {
             coordinator: coordinator,
             preferences: preferences,
             onOpenSettings: onOpenSettings,
-            onSelect: { [weak coordinator] window in coordinator?.select(window) }
+            onSelect: { [weak coordinator] item in coordinator?.select(item) }
         )
         panel.contentView = FirstMouseHostingView(rootView: rootView)
 
         // `@Published` fires before the property is updated, so the emitted
         // values are used rather than reading the coordinator back.
         Publishers.CombineLatest4(
-            coordinator.$windows,
+            coordinator.$items,
             coordinator.$isVisible,
             preferences.widthPublisher,
             preferences.positionPublisher
         )
         .receive(on: RunLoop.main)
-        .sink { [weak self] windows, isVisible, width, _ in
-            self?.apply(windowCount: windows.count, isVisible: isVisible, width: width)
+        .sink { [weak self] items, isVisible, width, _ in
+            self?.apply(windowCount: items.count, isVisible: isVisible, width: width)
         }
         .store(in: &cancellables)
 

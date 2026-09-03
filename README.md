@@ -32,6 +32,7 @@ gets out of the way.
 - **Minimised windows included**, shown dimmed, and restored when clicked.
 - **No Dock icon.** It lives in the menu bar, where the icon turns into a
   warning sign if Accessibility access is missing.
+- **Vivaldi shows workspaces, not windows** — see below.
 
 ## Install
 
@@ -67,10 +68,47 @@ no need to reopen it after granting access.
 | Setting | What it does |
 | --- | --- |
 | Show for | All applications, or only the ones you tick in the Apps tab |
+| Prefer an app's own states | Vivaldi shows its workspaces instead of windows |
 | Appear from *n* windows | The rail stays hidden below this many windows. Set it to 1 to always show it |
 | Width | 160–380 pt |
 | Position | Reset the rail back to the right edge |
 | Launch at login | Registers a login item via `SMAppService` |
+
+## App-specific states
+
+Some applications keep their own internal states that matter more than their
+windows. For those, the rail shows the states instead. This is a single switch
+in General — turn it off and every app falls back to plain window switching.
+
+### Vivaldi
+
+Vivaldi's workspaces all live inside one window, so window switching does not
+help with them at all, and its own picker is a dropdown at the top of the
+window. The rail lists the workspaces and switches with one click.
+
+How it works, and what it cannot do, was established by probing a running
+Vivaldi rather than guessed:
+
+- **The list** comes from `vivaldi.workspaces.list` in the profile's
+  `Preferences`. Vivaldi exposes no API for it: the `vivaldi.*` JavaScript
+  namespace is reachable only from its own bundled UI, and its AppleScript
+  dictionary is the stock Chromium one. The file is re-read only when it
+  changes, and any failure hands the app back to window switching.
+- **Switching** uses Vivaldi's built-in `Ctrl+Shift+<n>` shortcut. Pressing the
+  matching menu item through the accessibility API reports success and does
+  nothing, because Chromium wires those items up only while the menu is open.
+  The modifiers have to be sent as real key events too — Chromium ignores
+  modifiers that are merely set as flags on the key event.
+- **No row is marked active.** The workspace name appears nowhere in the
+  accessibility tree except inside the "Other Workspaces and Tabs" menu, which
+  omits the active one — but Chromium rebuilds that menu lazily, so just after a
+  switch it still describes the previous state. Highlighting the wrong row would
+  be worse than highlighting none.
+- **Only the first nine can be switched to**, because that is as far as
+  Vivaldi's own shortcuts go. Later workspaces are listed but shown dimmed.
+
+`--probe-vivaldi-live` dumps what the accessibility tree exposes about
+workspaces, reporting positions rather than names.
 
 ## Building from source
 

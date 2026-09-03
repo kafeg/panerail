@@ -60,7 +60,13 @@ final class OnboardingWindowController {
         )
         window.title = "Welcome to PaneRail"
         window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: OnboardingView())
+        window.contentView = NSHostingView(rootView: OnboardingView(onRequestAccess: { [weak self] in
+            // Register the app in the Accessibility list, put the pane in
+            // front of the user, and get out of the way.
+            AccessibilityAuthorizer.promptForTrust()
+            AccessibilityAuthorizer.openSystemSettings()
+            self?.close()
+        }))
         return window
     }
 }

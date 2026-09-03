@@ -22,6 +22,7 @@ public final class Preferences: ObservableObject {
         static let mode = "rail.mode"
         static let minimumWindows = "rail.minimumWindows"
         static let listedBundleIDs = "rail.listedBundleIDs"
+        static let appSpecificProviders = "rail.appSpecificProviders"
         static let width = "rail.width"
         static let originX = "rail.originX"
         static let originY = "rail.originY"
@@ -63,6 +64,12 @@ public final class Preferences: ObservableObject {
         didSet { defaults.set(listedBundleIDs, forKey: Key.listedBundleIDs) }
     }
 
+    /// Whether apps that keep their own internal states — Vivaldi's workspaces,
+    /// for instance — show those instead of their windows.
+    @Published public var appSpecificProviders: Bool {
+        didSet { defaults.set(appSpecificProviders, forKey: Key.appSpecificProviders) }
+    }
+
     @Published private var storedWidth: Double
 
     /// Rail width in points, clamped to a range that stays usable.
@@ -98,6 +105,7 @@ public final class Preferences: ObservableObject {
         mode = (defaults.string(forKey: Key.mode).flatMap(RailMode.init(rawValue:))) ?? .allApps
         storedMinimumWindows = max(1, defaults.object(forKey: Key.minimumWindows) as? Int ?? 2)
         listedBundleIDs = defaults.stringArray(forKey: Key.listedBundleIDs) ?? []
+        appSpecificProviders = defaults.object(forKey: Key.appSpecificProviders) as? Bool ?? true
         storedWidth = min(
             max(defaults.object(forKey: Key.width) as? Double ?? Self.defaultWidth, Self.minimumWidth),
             Self.maximumWidth

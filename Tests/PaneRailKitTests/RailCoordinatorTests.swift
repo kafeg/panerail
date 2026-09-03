@@ -46,7 +46,7 @@ final class RailCoordinatorTests: XCTestCase {
         let (coordinator, _) = makeCoordinator(source: makeSource(["one", "two", "three"]))
         coordinator.setFrontmost(makeApp())
 
-        XCTAssertEqual(coordinator.windows.map(\.title), ["one", "two", "three"])
+        XCTAssertEqual(coordinator.items.map(\.title), ["one", "two", "three"])
         XCTAssertTrue(coordinator.isVisible)
     }
 
@@ -54,7 +54,7 @@ final class RailCoordinatorTests: XCTestCase {
         let (coordinator, _) = makeCoordinator(source: makeSource(["", "notes"]))
         coordinator.setFrontmost(makeApp(name: "Preview"))
 
-        XCTAssertEqual(coordinator.windows.map(\.title), ["Preview", "notes"])
+        XCTAssertEqual(coordinator.items.map(\.title), ["Preview", "notes"])
     }
 
     func testNoFrontmostAppClearsEverything() {
@@ -63,7 +63,7 @@ final class RailCoordinatorTests: XCTestCase {
         XCTAssertTrue(coordinator.isVisible)
 
         coordinator.setFrontmost(nil)
-        XCTAssertTrue(coordinator.windows.isEmpty)
+        XCTAssertTrue(coordinator.items.isEmpty)
         XCTAssertFalse(coordinator.isVisible)
     }
 
@@ -71,7 +71,7 @@ final class RailCoordinatorTests: XCTestCase {
         let (coordinator, _) = makeCoordinator(source: makeSource(["only one"]))
         coordinator.setFrontmost(makeApp())
 
-        XCTAssertEqual(coordinator.windows.count, 1, "the list is still populated")
+        XCTAssertEqual(coordinator.items.count, 1, "the list is still populated")
         XCTAssertFalse(coordinator.isVisible, "but the rail stays hidden")
     }
 
@@ -79,7 +79,7 @@ final class RailCoordinatorTests: XCTestCase {
         let (coordinator, _) = makeCoordinator(source: makeSource(["one", "two"]), isTrusted: { false })
         coordinator.setFrontmost(makeApp())
 
-        XCTAssertTrue(coordinator.windows.isEmpty)
+        XCTAssertTrue(coordinator.items.isEmpty)
         XCTAssertFalse(coordinator.isVisible)
     }
 
@@ -92,10 +92,10 @@ final class RailCoordinatorTests: XCTestCase {
         let (coordinator, _) = makeCoordinator(source: source)
 
         coordinator.setFrontmost(makeApp())
-        XCTAssertEqual(coordinator.windows.map(\.title), ["a", "b"])
+        XCTAssertEqual(coordinator.items.map(\.title), ["a", "b"])
 
         coordinator.setFrontmost(FrontmostApp(pid: otherPID, bundleIdentifier: "com.example.other", name: "Other"))
-        XCTAssertEqual(coordinator.windows.map(\.title), ["c", "d"])
+        XCTAssertEqual(coordinator.items.map(\.title), ["c", "d"])
     }
 
     func testSelectRaisesTheWindowUnderTheOwningProcess() {
@@ -103,7 +103,7 @@ final class RailCoordinatorTests: XCTestCase {
         let (coordinator, _) = makeCoordinator(source: source)
         coordinator.setFrontmost(makeApp())
 
-        let target = coordinator.windows[1]
+        let target = coordinator.items[1]
         XCTAssertTrue(coordinator.select(target))
         XCTAssertEqual(source.raiseCalls.count, 1)
         XCTAssertEqual(source.raiseCalls.first?.window.id, target.id)
@@ -114,7 +114,7 @@ final class RailCoordinatorTests: XCTestCase {
         let source = makeSource(["one"])
         let (coordinator, _) = makeCoordinator(source: source)
 
-        XCTAssertFalse(coordinator.select(WindowInfo(id: 1, title: "one")))
+        XCTAssertFalse(coordinator.select(RailItem(id: 1, title: "one")))
         XCTAssertTrue(source.raiseCalls.isEmpty)
     }
 
@@ -124,7 +124,7 @@ final class RailCoordinatorTests: XCTestCase {
         let (coordinator, _) = makeCoordinator(source: source)
         coordinator.setFrontmost(makeApp())
 
-        XCTAssertFalse(coordinator.select(coordinator.windows[0]))
+        XCTAssertFalse(coordinator.select(coordinator.items[0]))
     }
 
     func testAllowListModeHidesUnlistedApps() {
@@ -161,12 +161,12 @@ final class RailCoordinatorTests: XCTestCase {
         let source = makeSource(["one", "two"])
         let (coordinator, preferences) = makeCoordinator(source: source)
         coordinator.setFrontmost(makeApp())
-        XCTAssertFalse(coordinator.windows.isEmpty)
+        XCTAssertFalse(coordinator.items.isEmpty)
 
         preferences.isEnabled = false
         coordinator.refresh()
 
-        XCTAssertTrue(coordinator.windows.isEmpty)
+        XCTAssertTrue(coordinator.items.isEmpty)
         XCTAssertFalse(coordinator.isVisible)
     }
 
@@ -179,7 +179,7 @@ final class RailCoordinatorTests: XCTestCase {
         source.windowsByPID[pid]?.append(WindowInfo(id: 99, title: "two"))
         coordinator.refresh()
 
-        XCTAssertEqual(coordinator.windows.count, 2)
+        XCTAssertEqual(coordinator.items.count, 2)
         XCTAssertTrue(coordinator.isVisible)
     }
 }

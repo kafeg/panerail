@@ -54,6 +54,9 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.kafeg.panerail
         PRODUCT_NAME: PaneRail
+        # Xcode 16 splits Debug builds into a separate debug dylib, which
+        # library validation then refuses to load alongside a signed app.
+        ENABLE_DEBUG_DYLIB: NO
         ENABLE_HARDENED_RUNTIME: YES
         COMBINE_HIDPI_IMAGES: YES
     info:

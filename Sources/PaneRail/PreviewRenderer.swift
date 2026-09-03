@@ -16,7 +16,7 @@ enum PreviewRenderer {
         coordinator.setFrontmost(DemoData.app)
 
         let railSize = RailGeometry.panelSize(
-            windowCount: coordinator.windows.count,
+            windowCount: coordinator.items.count,
             width: CGFloat(preferences.width)
         )
 

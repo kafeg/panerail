@@ -39,11 +39,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             exit(ok ? 0 : 1)
         }
 
+        if let index = CommandLine.arguments.firstIndex(of: "--probe-vivaldi-live") {
+            let path = CommandLine.arguments[safe: index + 1]
+                ?? NSTemporaryDirectory() + "panerail-vivaldi-live.txt"
+            VivaldiProbe.live(reportPath: path)
+            exit(0)
+        }
+
         let demo = isDemo
         let source: WindowSource = demo ? DemoData.makeSource() : AXWindowSource()
 
         let coordinator = RailCoordinator(
-            source: source,
+            windowProvider: WindowRailProvider(source: source),
+            // Apps that keep their own internal states get first refusal on
+            // describing themselves; the window provider is the fallback.
+            appSpecificProviders: demo ? [] : [VivaldiRailProvider()],
             preferences: preferences,
             isTrusted: { demo || AccessibilityAuthorizer.isProcessTrusted }
         )
@@ -121,7 +131,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         NSApp.activate(ignoringOtherApps: true)
         onboardingController?.show()
-        AccessibilityAuthorizer.promptForTrust()
     }
 }
 

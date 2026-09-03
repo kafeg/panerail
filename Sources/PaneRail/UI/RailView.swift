@@ -5,7 +5,7 @@ struct RailView: View {
     @ObservedObject var coordinator: RailCoordinator
     @ObservedObject var preferences: Preferences
     let onOpenSettings: () -> Void
-    let onSelect: (WindowInfo) -> Void
+    let onSelect: (RailItem) -> Void
 
     @State private var hoveredID: UInt64?
     @State private var isHoveringSettings = false
@@ -63,8 +63,8 @@ struct RailView: View {
     private var windowList: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 0) {
-                ForEach(coordinator.windows) { window in
-                    row(for: window)
+                ForEach(coordinator.items) { item in
+                    row(for: item)
                 }
             }
         }
@@ -72,23 +72,23 @@ struct RailView: View {
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
-    private func row(for window: WindowInfo) -> some View {
-        let isHovered = hoveredID == window.id
+    private func row(for item: RailItem) -> some View {
+        let isHovered = hoveredID == item.id
 
         return HStack(spacing: 7) {
             Circle()
-                .fill(window.isFocused ? Color.accentColor : Color.secondary.opacity(0.4))
+                .fill(item.isActive ? Color.accentColor : Color.secondary.opacity(0.4))
                 .frame(width: 5, height: 5)
 
-            Text(window.title)
+            Text(item.title)
                 .font(.system(size: 11.5))
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .foregroundStyle(window.isMinimized ? Color.secondary : Color.primary)
+                .foregroundStyle(item.isDimmed ? Color.secondary : Color.primary)
 
             Spacer(minLength: 0)
 
-            if window.isMinimized {
+            if item.isDimmed {
                 Image(systemName: "arrow.down.right.and.arrow.up.left")
                     .font(.system(size: 8))
                     .foregroundStyle(Color.secondary)
@@ -104,12 +104,12 @@ struct RailView: View {
         .contentShape(Rectangle())
         .onHover { hovering in
             if hovering {
-                hoveredID = window.id
-            } else if hoveredID == window.id {
+                hoveredID = item.id
+            } else if hoveredID == item.id {
                 hoveredID = nil
             }
         }
-        .onTapGesture { onSelect(window) }
-        .help(window.title)
+        .onTapGesture { onSelect(item) }
+        .help(item.title)
     }
 }
