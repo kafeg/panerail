@@ -57,6 +57,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
 
+        let about = NSMenuItem(title: "About PaneRail", action: #selector(showAbout), keyEquivalent: "")
+        about.target = self
+        menu.addItem(about)
+
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
@@ -89,6 +93,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     @objc private func toggleEnabled() {
         preferences.isEnabled.toggle()
+    }
+
+    @objc private func showAbout() {
+        // An accessory app has to come forward or the panel opens behind
+        // whatever the user was looking at.
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(nil)
     }
 
     @objc private func openSettings() {

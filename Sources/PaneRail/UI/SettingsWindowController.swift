@@ -22,7 +22,7 @@ final class SettingsWindowController {
 
     private func makeWindow() -> NSWindow {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 430),
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 448),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false

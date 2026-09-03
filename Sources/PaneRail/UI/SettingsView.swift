@@ -6,6 +6,19 @@ struct SettingsView: View {
     @ObservedObject var authorizer: AccessibilityAuthorizer
 
     var body: some View {
+        VStack(spacing: 6) {
+            tabs
+            // Its own row rather than an overlay, so it can never land on top
+            // of a tab's content.
+            Text("PaneRail \(AppVersion.display)")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(14)
+        .frame(width: 500, height: 448)
+    }
+
+    private var tabs: some View {
         TabView {
             GeneralSettingsView(preferences: preferences, authorizer: authorizer)
                 .tabItem { Label("General", systemImage: "gearshape") }
@@ -16,8 +29,6 @@ struct SettingsView: View {
             AdvancedSettingsView(preferences: preferences)
                 .tabItem { Label("Advanced", systemImage: "flask") }
         }
-        .padding(14)
-        .frame(width: 500, height: 430)
     }
 }
 
