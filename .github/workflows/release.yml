@@ -20,6 +20,22 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
+      # Signing and notarisation switch themselves on once the secrets exist.
+      # Without them the build still produces a usable, ad-hoc signed app that
+      # Gatekeeper will question on first launch.
+      - name: Check for signing credentials
+        id: creds
+        env:
+          CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          API_KEY: ${{ secrets.NOTARY_API_KEY }}
+        run: |
+          if [ -n "$CERTIFICATE" ] && [ -n "$API_KEY" ]; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Signing secrets absent — producing an ad-hoc signed build."
+          fi
+
       - name: Generate project
         run: xcodegen generate
 
@@ -32,8 +48,40 @@ jobs:
             -derivedDataPath build \
             test
 
-      - name: Build Release
+      - name: Import Developer ID certificate
+        if: steps.creds.outputs.signed == 'true'
+        env:
+          CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
         run: |
+          KEYCHAIN=$RUNNER_TEMP/build.keychain
+          KEYCHAIN_PASSWORD=$(uuidgen)
+
+          echo "$CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 900 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$KEYCHAIN" \
+            -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          # Without this, codesign blocks on a UI prompt that nobody can answer.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
+
+          rm -f "$RUNNER_TEMP/certificate.p12"
+          security find-identity -v -p codesigning "$KEYCHAIN"
+
+      - name: Build Release
+        env:
+          SIGNED: ${{ steps.creds.outputs.signed }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ "$SIGNED" = "true" ]; then
+            IDENTITY="Developer ID Application"
+          else
+            IDENTITY="-"
+          fi
+
           xcodebuild \
             -project PaneRail.xcodeproj \
             -scheme PaneRail \
@@ -41,19 +89,37 @@ jobs:
             -derivedDataPath build \
             MARKETING_VERSION="${{ steps.version.outputs.version }}" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            CODE_SIGN_IDENTITY="$IDENTITY" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            OTHER_CODE_SIGN_FLAGS="--timestamp" \
             build
 
-      # Signing and notarisation go here once an Apple Developer ID is available:
-      #
-      #   1. Store the Developer ID .p12 and its password, plus an App Store
-      #      Connect API key, as repository secrets.
-      #   2. Import the certificate into a temporary keychain.
-      #   3. Re-sign with CODE_SIGN_IDENTITY="Developer ID Application: ..."
-      #      and ENABLE_HARDENED_RUNTIME=YES.
-      #   4. xcrun notarytool submit --wait, then xcrun stapler staple.
-      #
-      # Until then the build is ad-hoc signed: Gatekeeper needs the user to
-      # right-click and choose Open the first time.
+      - name: Notarise and staple
+        if: steps.creds.outputs.signed == 'true'
+        env:
+          API_KEY: ${{ secrets.NOTARY_API_KEY }}
+          API_KEY_ID: ${{ secrets.NOTARY_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.NOTARY_API_ISSUER_ID }}
+        run: |
+          APP=build/Build/Products/Release/PaneRail.app
+          codesign --verify --strict --verbose=2 "$APP"
+
+          echo "$API_KEY" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/notarise.zip"
+
+          xcrun notarytool submit "$RUNNER_TEMP/notarise.zip" \
+            --key "$RUNNER_TEMP/notary.p8" \
+            --key-id "$API_KEY_ID" \
+            --issuer "$API_ISSUER_ID" \
+            --wait
+
+          # Stapling puts the ticket inside the app, so a first launch works
+          # even when the machine is offline.
+          xcrun stapler staple "$APP"
+          xcrun stapler validate "$APP"
+          spctl --assess --type execute --verbose=2 "$APP"
+
+          rm -f "$RUNNER_TEMP/notary.p8"
 
       - name: Package
         run: |
@@ -65,8 +131,16 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          SIGNED: ${{ steps.creds.outputs.signed }}
         run: |
+          if [ "$SIGNED" = "true" ]; then
+            NOTE=""
+          else
+            NOTE=$'\n\n---\nThis build is not notarised. On first launch macOS will block it: open System Settings › Privacy & Security, find the message naming PaneRail and click Open Anyway.'
+          fi
+
           gh release create "$GITHUB_REF_NAME" \
             --title "PaneRail ${{ steps.version.outputs.version }}" \
             --generate-notes \
+            --notes "$NOTE" \
             dist/*.zip

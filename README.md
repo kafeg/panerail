@@ -151,6 +151,25 @@ permission grant.
 hardened runtime enables library validation, which refuses to load an embedded
 framework whose ad-hoc signature was produced independently of the app's.
 
+## Releasing
+
+Pushing a `v*` tag builds, tests, packages and publishes to Releases.
+
+The workflow signs and notarises when these repository secrets are present,
+and falls back to an ad-hoc build when they are not, so it works either way:
+
+| Secret | What it is |
+| --- | --- |
+| `MACOS_CERTIFICATE_P12` | Developer ID Application certificate and key, base64 of a `.p12` |
+| `MACOS_CERTIFICATE_PASSWORD` | The password that `.p12` was exported with |
+| `APPLE_TEAM_ID` | Ten-character team identifier |
+| `NOTARY_API_KEY` | App Store Connect API key, base64 of the `.p8` |
+| `NOTARY_API_KEY_ID` / `NOTARY_API_ISSUER_ID` | That key's id and issuer |
+
+All of them require a paid Apple Developer Program membership. Note that a
+lapsed membership does not break releases already signed and notarised — they
+keep installing and running; membership is needed to sign and notarise new ones.
+
 ## Limitations
 
 - **Full-screen spaces.** A floating panel over another app's full-screen window
