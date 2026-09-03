@@ -1,6 +1,14 @@
 import XCTest
 @testable import PaneRailKit
 
+private final class FakeActiveReader: VivaldiActiveWorkspaceReading {
+    var index: Int?
+
+    init(index: Int? = nil) { self.index = index }
+
+    func activeIndex(among workspaces: [VivaldiWorkspace], pid: pid_t) -> Int? { index }
+}
+
 private final class FakeShortcutSender: ShortcutSending {
     private(set) var sent: [(digit: Int, pid: pid_t)] = []
 
@@ -32,8 +40,12 @@ final class VivaldiRailProviderTests: XCTestCase {
         try? Data(#"{"vivaldi":{"workspaces":{"list":[\#(entries)]}}}"#.utf8).write(to: fileURL)
     }
 
-    private func makeProvider() -> VivaldiRailProvider {
-        VivaldiRailProvider(sender: sender, preferencesURL: fileURL)
+    private func makeProvider(active: Int? = nil) -> VivaldiRailProvider {
+        VivaldiRailProvider(
+            sender: sender,
+            activeReader: FakeActiveReader(index: active),
+            preferencesURL: fileURL
+        )
     }
 
     private func vivaldi(pid: pid_t = 900) -> FrontmostApp {
@@ -67,17 +79,33 @@ final class VivaldiRailProviderTests: XCTestCase {
         XCTAssertEqual(items.map(\.id), [0, 1, 2])
     }
 
-    /// The active workspace is not discoverable, so nothing may claim to be it.
-    func testNoRowIsMarkedActive() {
-        write(names: ["Work", "Home"])
-        XCTAssertTrue(makeProvider().items(for: vivaldi()).allSatisfy { !$0.isActive })
+    func testTheActiveWorkspaceIsMarked() {
+        write(names: ["Work", "Home", "Media"])
+        let items = makeProvider(active: 1).items(for: vivaldi())
+        XCTAssertEqual(items.filter(\.isActive).map(\.title), ["Home"])
     }
 
-    func testWorkspacesBeyondTheNinthAreShownDimmed() {
+    /// When the active workspace cannot be established, highlighting the wrong
+    /// row would be worse than highlighting none.
+    func testNothingIsMarkedWhenTheActiveWorkspaceIsUnknown() {
+        write(names: ["Work", "Home"])
+        XCTAssertTrue(makeProvider(active: nil).items(for: vivaldi()).allSatisfy { !$0.isActive })
+    }
+
+    /// Ctrl+Shift+1 selects the window's own tabs rather than a workspace, so
+    /// the first workspace answers to the second digit and only eight fit.
+    func testWorkspacesPastTheLastShortcutAreShownDimmed() {
         write(names: (1...11).map { "W\($0)" })
         let items = makeProvider().items(for: vivaldi())
         XCTAssertEqual(items.count, 11)
-        XCTAssertEqual(items.filter(\.isDimmed).map(\.id), [9, 10])
+        XCTAssertEqual(items.filter(\.isDimmed).map(\.id), [8, 9, 10])
+        XCTAssertEqual(VivaldiRailProvider.switchableCount, 8)
+    }
+
+    func testShortcutDigitsSkipTheNoWorkspaceEntry() {
+        XCTAssertEqual(VivaldiRailProvider.shortcutDigit(forWorkspaceAt: 0), 2)
+        XCTAssertEqual(VivaldiRailProvider.shortcutDigit(forWorkspaceAt: 7), 9)
+        XCTAssertNil(VivaldiRailProvider.shortcutDigit(forWorkspaceAt: 8))
     }
 
     func testSelectingSendsTheMatchingShortcut() {
@@ -87,17 +115,23 @@ final class VivaldiRailProviderTests: XCTestCase {
 
         XCTAssertTrue(provider.activate(RailItem(id: 2, title: "Media"), in: app))
         XCTAssertEqual(sender.sent.count, 1)
-        XCTAssertEqual(sender.sent.first?.digit, 3, "index 2 is the third workspace")
+        XCTAssertEqual(sender.sent.first?.digit, 4, "the third workspace is Ctrl+Shift+4")
         XCTAssertEqual(sender.sent.first?.pid, 4321)
     }
 
-    /// Vivaldi has no shortcut past the ninth, so a click there must fail
-    /// honestly instead of sending a keystroke that does something else.
-    func testSelectingBeyondTheNinthSendsNothing() {
+    /// Past the last bound shortcut a click must fail honestly rather than
+    /// send a keystroke that does something else entirely.
+    func testSelectingPastTheLastShortcutSendsNothing() {
         write(names: (1...11).map { "W\($0)" })
         let provider = makeProvider()
-        XCTAssertFalse(provider.activate(RailItem(id: 9, title: "W10"), in: vivaldi()))
+        XCTAssertFalse(provider.activate(RailItem(id: 8, title: "W9"), in: vivaldi()))
         XCTAssertTrue(sender.sent.isEmpty)
+    }
+
+    func testTheFirstWorkspaceUsesTheSecondDigit() {
+        write(names: ["Work", "Home"])
+        XCTAssertTrue(makeProvider().activate(RailItem(id: 0, title: "Work"), in: vivaldi()))
+        XCTAssertEqual(sender.sent.first?.digit, 2)
     }
 
     func testPicksUpAnEditedProfile() {

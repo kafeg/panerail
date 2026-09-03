@@ -98,14 +98,14 @@ Vivaldi rather than guessed:
   matching menu item through the accessibility API reports success and does
   nothing, because Chromium wires those items up only while the menu is open.
   The modifiers have to be sent as real key events too — Chromium ignores
-  modifiers that are merely set as flags on the key event.
-- **No row is marked active.** The workspace name appears nowhere in the
-  accessibility tree except inside the "Other Workspaces and Tabs" menu, which
-  omits the active one — but Chromium rebuilds that menu lazily, so just after a
-  switch it still describes the previous state. Highlighting the wrong row would
-  be worse than highlighting none.
-- **Only the first nine can be switched to**, because that is as far as
-  Vivaldi's own shortcuts go. Later workspaces are listed but shown dimmed.
+  modifiers that are merely set as flags on the key event. `Ctrl+Shift+1`
+  selects the window's own tabs rather than a workspace, so the first workspace
+  answers to the second digit.
+- **The active workspace** comes from the "Other Workspaces and Tabs" menu,
+  which lists every workspace except the one in use: the missing one is active.
+  When that is ambiguous, no row is highlighted rather than the wrong one.
+- **Only the first eight can be switched to** — nine digits, less the one the
+  no-workspace entry takes. Later workspaces are listed but shown dimmed.
 
 `--probe-vivaldi-live` dumps what the accessibility tree exposes about
 workspaces, reporting positions rather than names.

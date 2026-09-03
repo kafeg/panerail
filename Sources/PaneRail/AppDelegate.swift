@@ -25,6 +25,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let dark = CommandLine.arguments.contains("--dark")
 
+        if let index = CommandLine.arguments.firstIndex(of: "--render-live"),
+           let bundleID = CommandLine.arguments[safe: index + 1],
+           let path = CommandLine.arguments[safe: index + 2] {
+            let ok = PreviewRenderer.renderLive(bundleIdentifier: bundleID, to: path, dark: dark)
+            NSApp.terminate(nil)
+            exit(ok ? 0 : 1)
+        }
+
         if let index = CommandLine.arguments.firstIndex(of: "--render-preview"),
            let path = CommandLine.arguments[safe: index + 1] {
             let ok = PreviewRenderer.render(to: path, dark: dark)

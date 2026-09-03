@@ -27,15 +27,19 @@ enum PreviewRenderer {
             onSelect: { _ in }
         )
 
+        return draw(rail: rail, size: railSize, dark: dark, to: path)
+    }
+
+    private static func draw(rail: RailView, size: CGSize, dark: Bool, to path: String) -> Bool {
         let hosting = NSHostingView(rootView: rail)
-        hosting.frame = CGRect(origin: .zero, size: railSize)
+        hosting.frame = CGRect(origin: .zero, size: size)
 
         // The blur of `NSVisualEffectView` has nothing to sample off-screen, so
         // the rail is composited over a flat backdrop instead.
         let padding: CGFloat = 28
         let container = BackdropView(frame: CGRect(
             origin: .zero,
-            size: CGSize(width: railSize.width + padding * 2, height: railSize.height + padding * 2)
+            size: CGSize(width: size.width + padding * 2, height: size.height + padding * 2)
         ))
         container.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         container.addSubview(hosting)
@@ -49,6 +53,53 @@ enum PreviewRenderer {
 
         guard let data = rep.representation(using: .png, properties: [:]) else { return false }
         return (try? data.write(to: URL(fileURLWithPath: path))) != nil
+    }
+
+    /// Renders the rail against a real running application, so the README
+    /// shows the app's own icon and genuine window titles rather than a mock-up.
+    ///
+    /// Needs the Accessibility grant, so it has to be launched through `open`.
+    static func renderLive(bundleIdentifier: String, to path: String, dark: Bool) -> Bool {
+        guard AccessibilityAuthorizer.isProcessTrusted else {
+            print("no accessibility permission")
+            return false
+        }
+        guard let running = NSWorkspace.shared.runningApplications.first(where: {
+            $0.bundleIdentifier == bundleIdentifier
+        }), let app = FrontmostApp(running: running) else {
+            print("\(bundleIdentifier) is not running")
+            return false
+        }
+
+        let suite = UserDefaults(suiteName: "dev.kafeg.panerail.preview") ?? .standard
+        suite.removePersistentDomain(forName: "dev.kafeg.panerail.preview")
+        let preferences = Preferences(defaults: suite)
+
+        let coordinator = RailCoordinator(
+            windowProvider: WindowRailProvider(source: AXWindowSource()),
+            appSpecificProviders: [VivaldiRailProvider()],
+            preferences: preferences
+        )
+        coordinator.setFrontmost(app)
+        guard !coordinator.items.isEmpty else {
+            print("\(app.name) has no windows to show")
+            return false
+        }
+
+        return draw(
+            rail: RailView(
+                coordinator: coordinator,
+                preferences: preferences,
+                onOpenSettings: {},
+                onSelect: { _ in }
+            ),
+            size: RailGeometry.panelSize(
+                windowCount: coordinator.items.count,
+                width: CGFloat(preferences.width)
+            ),
+            dark: dark,
+            to: path
+        )
     }
 
     /// Renders the General tab's content, so its layout can be checked without

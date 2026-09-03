@@ -3,6 +3,8 @@ SCHEME    := PaneRail
 DERIVED   := build
 DEBUG_APP := $(DERIVED)/Build/Products/Debug/PaneRail.app
 BUNDLE_ID := dev.kafeg.panerail
+# The app the README screenshots are taken against.
+APP_ID ?= com.microsoft.VSCode
 
 # macOS ties an Accessibility grant to the code signature, so ad-hoc builds
 # lose the permission on every rebuild. When the local development certificate
@@ -14,14 +16,15 @@ SIGN_IDENTITY := $(shell security find-identity -v -p codesigning 2>/dev/null \
 XCODEFLAGS := -project $(XCODEPROJ) -scheme $(SCHEME) -derivedDataPath $(DERIVED) \
 	CODE_SIGN_IDENTITY="$(SIGN_IDENTITY)"
 
-.PHONY: help generate build test run demo preview icons dev-certificate package install clean reset-permission
+.PHONY: help generate build test run demo preview preview-rail icons dev-certificate package install clean reset-permission
 
 help:
 	@echo "make build             Build the Debug app"
 	@echo "make test              Run the unit tests"
 	@echo "make run               Build and launch"
 	@echo "make demo              Launch with scripted windows, no permission needed"
-	@echo "make preview           Re-render the README screenshots"
+	@echo "make preview           Re-render the settings screenshots"
+	@echo "make preview-rail      Re-render the rail screenshots against a running app"
 	@echo "make icons             Rebuild AppIcon.icns from Assets/icon.svg"
 	@echo "make package           Build Release and zip it into dist/"
 	@echo "make install           Build Release and update /Applications in place"
@@ -46,12 +49,19 @@ demo: build
 	@pkill -f "PaneRail.app/Contents/MacOS/PaneRail" || true
 	open $(DEBUG_APP) --args --demo
 
+# The settings shots render from scripted state. The rail shots are taken
+# against a real running app so the README shows its actual icon, which means
+# they need the installed, permitted build and whatever app you point them at.
 preview: build
-	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-preview docs/rail-light.png
-	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-preview docs/rail-dark.png --dark
 	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-settings docs/settings-light.png
 	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-settings docs/settings-dark.png --dark
 	@rm -f default.profraw
+
+preview-rail: install
+	open -n /Applications/PaneRail.app --args --render-live $(APP_ID) docs/rail-light.png
+	sleep 6
+	open -n /Applications/PaneRail.app --args --render-live $(APP_ID) docs/rail-dark.png --dark
+	sleep 6
 
 icons:
 	./Scripts/generate-icons.sh

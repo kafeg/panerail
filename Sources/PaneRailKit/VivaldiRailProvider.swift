@@ -14,26 +14,40 @@ import Foundation
 /// - Switching goes through the built-in `Ctrl+Shift+<n>` shortcut. Pressing
 ///   the matching menu item over the accessibility API reports success and does
 ///   nothing, because Chromium wires those items up only while the menu is open.
-/// - The active workspace is not reported. Its name appears nowhere in the
-///   accessibility tree except inside the "Other Workspaces and Tabs" menu,
-///   which omits the active one — but Chromium rebuilds that menu lazily, so
-///   just after a switch it still describes the previous state. Rather than
-///   highlight the wrong row, no row is marked active.
+/// - The active workspace is read back from the "Other Workspaces and Tabs"
+///   menu, which lists everything except the workspace in use; the one missing
+///   from it is the active one. When that cannot be established unambiguously,
+///   no row is highlighted rather than the wrong one.
 public final class VivaldiRailProvider: RailItemProvider {
-    /// Vivaldi's own shortcuts only cover the first nine workspaces.
-    public static let switchableCount = 9
+    /// Ctrl+Shift+1 selects the window's own tabs — the entry with no
+    /// workspace — so the first workspace answers to the second digit.
+    static let firstWorkspaceDigit = 2
+    private static let highestDigit = 9
+
+    /// How many workspaces Vivaldi's own shortcuts can reach.
+    public static let switchableCount = highestDigit - firstWorkspaceDigit + 1
 
     private let sender: ShortcutSending
+    private let activeReader: VivaldiActiveWorkspaceReading?
     private let preferencesURL: URL
     private var cached: [VivaldiWorkspace] = []
     private var cachedAt: Date?
 
     public init(
         sender: ShortcutSending = CGEventShortcutSender(),
+        activeReader: VivaldiActiveWorkspaceReading? = AXVivaldiActiveWorkspaceReader(),
         preferencesURL: URL = VivaldiWorkspaces.preferencesURL()
     ) {
         self.sender = sender
+        self.activeReader = activeReader
         self.preferencesURL = preferencesURL
+    }
+
+    /// The digit of the built-in shortcut for a workspace, or `nil` when it is
+    /// past the end of what Vivaldi binds.
+    static func shortcutDigit(forWorkspaceAt index: Int) -> Int? {
+        let digit = index + firstWorkspaceDigit
+        return digit <= highestDigit ? digit : nil
     }
 
     public func supports(_ app: FrontmostApp) -> Bool {
@@ -41,23 +55,25 @@ public final class VivaldiRailProvider: RailItemProvider {
     }
 
     public func items(for app: FrontmostApp) -> [RailItem] {
-        workspaces().map { workspace in
+        let list = workspaces()
+        let active = activeReader?.activeIndex(among: list, pid: app.pid)
+
+        return list.map { workspace in
             RailItem(
                 id: UInt64(workspace.index),
                 title: workspace.name,
-                isActive: false,
-                // Beyond the ninth there is no shortcut to send, so those rows
-                // are shown but visibly inert rather than silently dead.
-                isDimmed: workspace.index >= Self.switchableCount
+                isActive: workspace.index == active,
+                // Past the last bound shortcut there is nothing to send, so
+                // those rows are shown but visibly inert rather than dead.
+                isDimmed: Self.shortcutDigit(forWorkspaceAt: workspace.index) == nil
             )
         }
     }
 
     @discardableResult
     public func activate(_ item: RailItem, in app: FrontmostApp) -> Bool {
-        let index = Int(item.id)
-        guard index < Self.switchableCount else { return false }
-        sender.sendControlShift(digit: index + 1, to: app.pid)
+        guard let digit = Self.shortcutDigit(forWorkspaceAt: Int(item.id)) else { return false }
+        sender.sendControlShift(digit: digit, to: app.pid)
         return true
     }
 
