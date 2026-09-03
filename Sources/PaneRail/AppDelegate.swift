@@ -35,7 +35,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // describing themselves; the window provider is the fallback.
             appSpecificProviders: demo ? [] : [VivaldiRailProvider()],
             preferences: preferences,
-            isTrusted: { demo || AccessibilityAuthorizer.isProcessTrusted }
+            isTrusted: { demo || AccessibilityAuthorizer.isProcessTrusted },
+            fullScreenDetector: demo ? nil : AXFullScreenDetector()
         )
         self.coordinator = coordinator
 

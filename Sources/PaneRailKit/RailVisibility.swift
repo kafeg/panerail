@@ -11,6 +11,8 @@ public struct RailVisibilityInput {
     public let minimumItems: Int
     public let listedBundleIDs: Set<String>
     public let excludedBundleIDs: Set<String>
+    public let isFullScreen: Bool
+    public let hidesInFullScreen: Bool
 
     public init(
         isEnabled: Bool = true,
@@ -20,7 +22,9 @@ public struct RailVisibilityInput {
         mode: RailMode = .allApps,
         minimumItems: Int = 2,
         listedBundleIDs: Set<String> = [],
-        excludedBundleIDs: Set<String> = RailVisibility.defaultExclusions
+        excludedBundleIDs: Set<String> = RailVisibility.defaultExclusions,
+        isFullScreen: Bool = false,
+        hidesInFullScreen: Bool = true
     ) {
         self.isEnabled = isEnabled
         self.isAccessibilityTrusted = isAccessibilityTrusted
@@ -30,6 +34,8 @@ public struct RailVisibilityInput {
         self.minimumItems = minimumItems
         self.listedBundleIDs = listedBundleIDs
         self.excludedBundleIDs = excludedBundleIDs
+        self.isFullScreen = isFullScreen
+        self.hidesInFullScreen = hidesInFullScreen
     }
 }
 
@@ -57,6 +63,7 @@ public enum RailVisibility {
         guard input.isEnabled, input.isAccessibilityTrusted else { return false }
         guard let bundleID = input.bundleIdentifier, !bundleID.isEmpty else { return false }
         guard !input.excludedBundleIDs.contains(bundleID) else { return false }
+        guard !(input.isFullScreen && input.hidesInFullScreen) else { return false }
 
         switch input.mode {
         case .allApps:

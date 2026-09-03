@@ -15,7 +15,7 @@ struct SettingsView: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(14)
-        .frame(width: 500, height: 448)
+        .frame(width: 500, height: 492)
     }
 
     private var tabs: some View {
@@ -109,6 +109,16 @@ struct GeneralSettingsView: View {
                         Text(preferences.minimumWindows == 1
                              ? "Shown even for single-window apps."
                              : "Apps with fewer windows are skipped.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                GridRow {
+                    label("Full screen")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle("Hide while a window fills the screen", isOn: $preferences.hidesInFullScreen)
+                        Text("Keeps the rail out of video and presentations.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

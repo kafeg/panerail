@@ -16,6 +16,7 @@ enum PreferencesDiagnostics {
         minimumWindows=\(preferences.minimumWindows)
         listedBundleIDs=\(preferences.listedBundleIDs.joined(separator: "|"))
         appSpecificProviders=\(preferences.appSpecificProviders)
+        hidesInFullScreen=\(preferences.hidesInFullScreen)
         width=\(Int(preferences.width))
         savedOrigin=\(origin)
         """
@@ -29,6 +30,7 @@ enum PreferencesDiagnostics {
         preferences.minimumWindows = 5
         preferences.listedBundleIDs = ["com.example.one", "com.example.two"]
         preferences.appSpecificProviders = true
+        preferences.hidesInFullScreen = false
         preferences.width = 310
         preferences.savedOrigin = CGPoint(x: 321, y: 654)
     }

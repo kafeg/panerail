@@ -9,7 +9,9 @@ final class RailVisibilityTests: XCTestCase {
         itemCount: Int = 3,
         mode: RailMode = .allApps,
         minimumItems: Int = 2,
-        listed: Set<String> = []
+        listed: Set<String> = [],
+        isFullScreen: Bool = false,
+        hidesInFullScreen: Bool = true
     ) -> RailVisibilityInput {
         RailVisibilityInput(
             isEnabled: isEnabled,
@@ -18,7 +20,9 @@ final class RailVisibilityTests: XCTestCase {
             itemCount: itemCount,
             mode: mode,
             minimumItems: minimumItems,
-            listedBundleIDs: listed
+            listedBundleIDs: listed,
+            isFullScreen: isFullScreen,
+            hidesInFullScreen: hidesInFullScreen
         )
     }
 
@@ -76,6 +80,14 @@ final class RailVisibilityTests: XCTestCase {
 
     /// Eligibility is the half of the rule that does not need a row count, so a
     /// caller can skip collecting rows for an app that is ruled out anyway.
+    func testHiddenWhileAWindowFillsTheScreen() {
+        XCTAssertFalse(RailVisibility.shouldShow(input(isFullScreen: true)))
+    }
+
+    func testFullScreenIsIgnoredWhenTheSettingIsOff() {
+        XCTAssertTrue(RailVisibility.shouldShow(input(isFullScreen: true, hidesInFullScreen: false)))
+    }
+
     func testEligibilityIgnoresTheRowCount() {
         XCTAssertTrue(RailVisibility.isEligible(input(itemCount: 0)))
         XCTAssertFalse(RailVisibility.isEligible(input(isEnabled: false, itemCount: 99)))

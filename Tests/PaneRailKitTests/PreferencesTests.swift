@@ -30,6 +30,7 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(preferences.width, Preferences.defaultWidth)
         XCTAssertTrue(preferences.listedBundleIDs.isEmpty)
         XCTAssertNil(preferences.savedOrigin)
+        XCTAssertTrue(preferences.hidesInFullScreen)
         XCTAssertFalse(
             preferences.appSpecificProviders,
             "app-specific states lean on undocumented internals, so they are opt-in"
@@ -44,6 +45,7 @@ final class PreferencesTests: XCTestCase {
         first.width = 300
         first.addListed("com.example.editor")
         first.appSpecificProviders = true
+        first.hidesInFullScreen = false
         first.savedOrigin = CGPoint(x: 120, y: 640)
 
         let second = makePreferences()
@@ -53,6 +55,7 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(second.width, 300)
         XCTAssertEqual(second.listedBundleIDs, ["com.example.editor"])
         XCTAssertTrue(second.appSpecificProviders)
+        XCTAssertFalse(second.hidesInFullScreen)
         XCTAssertEqual(second.savedOrigin, CGPoint(x: 120, y: 640))
     }
 

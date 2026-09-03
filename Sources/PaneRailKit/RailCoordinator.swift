@@ -18,6 +18,7 @@ public final class RailCoordinator: ObservableObject {
     private let windowProvider: RailItemProvider
     private let appSpecificProviders: [RailItemProvider]
     private let isTrusted: () -> Bool
+    private let fullScreenDetector: FullScreenDetecting?
     /// The provider that produced the current rows, so a click goes back to
     /// whichever one knows how to act on them.
     private var activeProvider: RailItemProvider?
@@ -27,12 +28,14 @@ public final class RailCoordinator: ObservableObject {
         windowProvider: RailItemProvider,
         appSpecificProviders: [RailItemProvider] = [],
         preferences: Preferences,
-        isTrusted: @escaping () -> Bool = { true }
+        isTrusted: @escaping () -> Bool = { true },
+        fullScreenDetector: FullScreenDetecting? = nil
     ) {
         self.windowProvider = windowProvider
         self.appSpecificProviders = appSpecificProviders
         self.preferences = preferences
         self.isTrusted = isTrusted
+        self.fullScreenDetector = fullScreenDetector
 
         // Settings changes must be reflected without waiting for the next poll.
         preferences.objectWillChange
@@ -73,6 +76,11 @@ public final class RailCoordinator: ObservableObject {
             return
         }
 
+        // Only asked when the setting is on, so the check costs nothing to
+        // anyone who has turned it off.
+        let isFullScreen = preferences.hidesInFullScreen
+            && (fullScreenDetector?.isFullScreen(pid: app.pid) ?? false)
+
         // The allow list outranks everything a provider might offer, so an app
         // that is ruled out is never asked for its rows at all.
         let input = RailVisibilityInput(
@@ -82,7 +90,9 @@ public final class RailCoordinator: ObservableObject {
             itemCount: 0,
             mode: preferences.mode,
             minimumItems: preferences.minimumWindows,
-            listedBundleIDs: Set(preferences.listedBundleIDs)
+            listedBundleIDs: Set(preferences.listedBundleIDs),
+            isFullScreen: isFullScreen,
+            hidesInFullScreen: preferences.hidesInFullScreen
         )
         guard RailVisibility.isEligible(input) else {
             if !items.isEmpty { items = [] }

@@ -24,8 +24,9 @@ gets out of the way.
 
 - **Follows the front app.** The rail always describes the app you are looking at.
 - **Never steals focus.** Clicking the rail does not change which app is active.
-- **Stays out of the way.** Hidden until an app has more than one window; the
-  threshold is configurable, as is an allow list of specific apps.
+- **Stays out of the way.** Hidden until an app has more than one window, and
+  while a window fills the screen. The threshold is configurable, as is an allow
+  list of specific apps.
 - **Drag it anywhere** by its header. The position is remembered.
 - **Minimised windows included**, shown dimmed, and restored when clicked.
 - **No Dock icon.** It lives in the menu bar, where the icon turns into a
@@ -79,6 +80,7 @@ permission state is the first thing the window reports, and it updates live.
 | --- | --- |
 | Show for | All applications, or only the ones ticked in the Apps tab |
 | Appear from *n* windows | The rail stays hidden below this many windows. Set it to 1 to always show it |
+| Hide in full screen | Gets out of the way while a window fills the screen. On by default |
 | Width | 160–380 pt |
 | Position | Reset the rail back to the right edge |
 | Launch at login | Registers a login item via `SMAppService` |

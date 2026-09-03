@@ -2,6 +2,18 @@ import Combine
 import XCTest
 @testable import PaneRailKit
 
+private final class StubFullScreenDetector: FullScreenDetecting {
+    let isFullScreen: Bool
+    private(set) var queries = 0
+
+    init(isFullScreen: Bool) { self.isFullScreen = isFullScreen }
+
+    func isFullScreen(pid: pid_t) -> Bool {
+        queries += 1
+        return isFullScreen
+    }
+}
+
 final class RailCoordinatorTests: XCTestCase {
     private var suiteName = ""
     private var defaults: UserDefaults!
@@ -33,13 +45,48 @@ final class RailCoordinatorTests: XCTestCase {
 
     private func makeCoordinator(
         source: WindowSource,
-        isTrusted: @escaping () -> Bool = { true }
+        isTrusted: @escaping () -> Bool = { true },
+        fullScreen: Bool? = nil
     ) -> (RailCoordinator, Preferences) {
         let preferences = Preferences(defaults: defaults)
         return (
-            RailCoordinator(source: source, preferences: preferences, isTrusted: isTrusted),
+            RailCoordinator(
+                windowProvider: WindowRailProvider(source: source),
+                preferences: preferences,
+                isTrusted: isTrusted,
+                fullScreenDetector: fullScreen.map(StubFullScreenDetector.init(isFullScreen:))
+            ),
             preferences
         )
+    }
+
+    func testHiddenWhileAWindowFillsTheScreen() {
+        let (coordinator, _) = makeCoordinator(source: makeSource(["one", "two"]), fullScreen: true)
+        coordinator.setFrontmost(makeApp())
+        XCTAssertFalse(coordinator.isVisible)
+    }
+
+    func testShownWhenNothingFillsTheScreen() {
+        let (coordinator, _) = makeCoordinator(source: makeSource(["one", "two"]), fullScreen: false)
+        coordinator.setFrontmost(makeApp())
+        XCTAssertTrue(coordinator.isVisible)
+    }
+
+    /// With the setting off the detector must not even be consulted, so nobody
+    /// pays for a check they have declined.
+    func testTheDetectorIsSkippedWhenTheSettingIsOff() {
+        let detector = StubFullScreenDetector(isFullScreen: true)
+        let preferences = Preferences(defaults: defaults)
+        preferences.hidesInFullScreen = false
+        let coordinator = RailCoordinator(
+            windowProvider: WindowRailProvider(source: makeSource(["one", "two"])),
+            preferences: preferences,
+            fullScreenDetector: detector
+        )
+
+        coordinator.setFrontmost(makeApp())
+        XCTAssertTrue(coordinator.isVisible)
+        XCTAssertEqual(detector.queries, 0)
     }
 
     func testLoadsWindowsForTheFrontmostApp() {

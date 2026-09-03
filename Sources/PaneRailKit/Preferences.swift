@@ -23,6 +23,7 @@ public final class Preferences: ObservableObject {
         static let minimumWindows = "rail.minimumWindows"
         static let listedBundleIDs = "rail.listedBundleIDs"
         static let appSpecificProviders = "rail.appSpecificProviders"
+        static let hidesInFullScreen = "rail.hidesInFullScreen"
         static let width = "rail.width"
         static let originX = "rail.originX"
         static let originY = "rail.originY"
@@ -62,6 +63,14 @@ public final class Preferences: ObservableObject {
 
     @Published public var listedBundleIDs: [String] {
         didSet { defaults.set(listedBundleIDs, forKey: Key.listedBundleIDs) }
+    }
+
+    /// Whether the rail gets out of the way while a window fills the screen.
+    ///
+    /// On by default: a full-screen window is usually video or a presentation,
+    /// and there is nothing to switch between in a full-screen space anyway.
+    @Published public var hidesInFullScreen: Bool {
+        didSet { defaults.set(hidesInFullScreen, forKey: Key.hidesInFullScreen) }
     }
 
     /// Whether apps that keep their own internal states — Vivaldi's workspaces,
@@ -109,6 +118,7 @@ public final class Preferences: ObservableObject {
         storedMinimumWindows = max(1, defaults.object(forKey: Key.minimumWindows) as? Int ?? 2)
         listedBundleIDs = defaults.stringArray(forKey: Key.listedBundleIDs) ?? []
         appSpecificProviders = defaults.object(forKey: Key.appSpecificProviders) as? Bool ?? false
+        hidesInFullScreen = defaults.object(forKey: Key.hidesInFullScreen) as? Bool ?? true
         storedWidth = min(
             max(defaults.object(forKey: Key.width) as? Double ?? Self.defaultWidth, Self.minimumWidth),
             Self.maximumWidth
