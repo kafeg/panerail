@@ -14,6 +14,13 @@ final class AppVersionTests: XCTestCase {
         XCTAssertEqual(AppVersion.display(marketing: "0.1.0", build: ""), "0.1.0")
     }
 
+    /// The third component is the commit count, so "0.1.147 (147)" would say
+    /// the same thing twice.
+    func testHidesABuildThatIsAlreadyTheLastComponent() {
+        XCTAssertEqual(AppVersion.display(marketing: "0.1.147", build: "147"), "0.1.147")
+        XCTAssertEqual(AppVersion.display(marketing: "0.1.14", build: "4"), "0.1.14 (4)")
+    }
+
     func testCopesWithAMissingVersion() {
         XCTAssertEqual(AppVersion.display(marketing: "", build: "47"), "build 47")
         XCTAssertEqual(AppVersion.display(marketing: "", build: ""), "")

@@ -12,13 +12,12 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The version's last component is the commit count.
+          fetch-depth: 0
 
       - name: Install XcodeGen
         run: brew install xcodegen
-
-      - name: Derive version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       # Signing and notarisation switch themselves on once the secrets exist.
       # Without them the build still produces a usable, ad-hoc signed app that
@@ -87,12 +86,22 @@ jobs:
             -scheme PaneRail \
             -configuration Release \
             -derivedDataPath build \
-            MARKETING_VERSION="${{ steps.version.outputs.version }}" \
-            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             CODE_SIGN_IDENTITY="$IDENTITY" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             OTHER_CODE_SIGN_FLAGS="--timestamp" \
             build
+
+      # The built app is the single source of truth: its version was stamped
+      # from the commit count during the build.
+      - name: Read the built version
+        id: version
+        run: |
+          PLIST=build/Build/Products/Release/PaneRail.app/Contents/Info.plist
+          VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::warning::Tag $GITHUB_REF_NAME does not match the built version $VERSION"
+          fi
 
       - name: Notarise and staple
         if: steps.creds.outputs.signed == 'true'

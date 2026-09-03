@@ -15,6 +15,9 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The version's last component is the commit count.
+          fetch-depth: 0
 
       - name: Show toolchain
         run: xcodebuild -version

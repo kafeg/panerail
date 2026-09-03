@@ -16,7 +16,7 @@ SIGN_IDENTITY := $(shell security find-identity -v -p codesigning 2>/dev/null \
 XCODEFLAGS := -project $(XCODEPROJ) -scheme $(SCHEME) -derivedDataPath $(DERIVED) \
 	CODE_SIGN_IDENTITY="$(SIGN_IDENTITY)"
 
-.PHONY: help generate build test run demo preview preview-rail icons dev-certificate package install clean reset-permission
+.PHONY: help generate build test run demo preview preview-rail icons version dev-certificate package install clean reset-permission
 
 help:
 	@echo "make build             Build the Debug app"
@@ -28,6 +28,7 @@ help:
 	@echo "make icons             Rebuild AppIcon.icns from Assets/icon.svg"
 	@echo "make package           Build Release and zip it into dist/"
 	@echo "make install           Build Release and update /Applications in place"
+	@echo "make version           Print the version the next build will carry"
 	@echo "make dev-certificate   Create the signing certificate that keeps the Accessibility grant"
 	@echo "make reset-permission  Forget the Accessibility grant for this bundle id"
 	@echo "make clean             Remove build output and the generated project"
@@ -65,6 +66,12 @@ preview-rail: install
 
 icons:
 	./Scripts/generate-icons.sh
+
+# What the next build will call itself, so a tag can be named to match.
+version:
+	@printf '%s.%s\n' \
+		"$$(sed -n 's/^ *MARKETING_VERSION: *"\(.*\)"/\1/p' project.yml)" \
+		"$$(git rev-list --count HEAD)"
 
 dev-certificate:
 	./Scripts/create-dev-certificate.sh

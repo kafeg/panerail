@@ -26,6 +26,9 @@ public enum AppVersion {
 
         guard !version.isEmpty else { return build.isEmpty ? "" : "build \(build)" }
         guard !build.isEmpty, build != version, build != "1" else { return version }
+        // The version's last component is the build number, so printing it
+        // again in brackets says nothing.
+        guard !version.hasSuffix(".\(build)") else { return version }
         return "\(version) (\(build))"
     }
 }

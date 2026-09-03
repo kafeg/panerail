@@ -153,6 +153,12 @@ framework whose ad-hoc signature was produced independently of the app's.
 
 ## Releasing
 
+Versions are `<major>.<minor>.<commits>` — the last component is the commit
+count, stamped into the app at build time, so any build says which commit it
+came from. Only the first two are chosen by hand, in `project.yml`. `make
+version` prints what the next build will call itself, which is the name to give
+the tag.
+
 Pushing a `v*` tag builds, tests, packages and publishes to Releases.
 
 The workflow signs and notarises when these repository secrets are present,
