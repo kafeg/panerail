@@ -33,14 +33,27 @@ gets out of the way.
 
 ## Install
 
+### From source (no Gatekeeper prompts)
+
+Locally built apps are never quarantined, so this is the smoothest route:
+
+```sh
+git clone https://github.com/kafeg/panerail.git
+cd panerail
+make dev-certificate   # once: keeps the Accessibility grant across rebuilds
+make install
+```
+
+### From Releases
+
 Download the latest `PaneRail.zip` from
 [Releases](https://github.com/kafeg/panerail/releases), unzip it and move
 `PaneRail.app` to `/Applications`.
 
-Releases are not notarised yet, so the first launch needs a right-click on the
-app and **Open** rather than a double-click. For the same reason macOS treats
-each new version as a different app, and Accessibility access has to be granted
-again after an update.
+Releases are not notarised, so macOS blocks the first launch. On macOS 15 and
+later the old Control-click shortcut no longer works: open **System Settings ›
+Privacy & Security**, scroll to the message naming PaneRail, click **Open
+Anyway** and confirm with your password. This is needed once per version.
 
 ### Accessibility permission
 
