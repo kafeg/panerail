@@ -41,7 +41,9 @@ enum DeveloperCommands {
         }
 
         if let path = value(after: "--render-settings") {
-            finish(PreviewRenderer.renderSettings(to: path, dark: dark))
+            finish(PreviewRenderer.renderSettings(
+                to: path, dark: dark, advanced: arguments.contains("--advanced")
+            ))
         }
 
         if arguments.contains("--probe-vivaldi-live") {

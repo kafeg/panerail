@@ -66,7 +66,6 @@ permission state is the first thing the window reports, and it updates live.
 | --- | --- |
 | Show for | All applications, or only the ones ticked in the Apps tab |
 | Appear from *n* windows | The rail stays hidden below this many windows. Set it to 1 to always show it |
-| Use an app's own states | Experimental, off by default — see below |
 | Width | 160–380 pt |
 | Position | Reset the rail back to the right edge |
 | Launch at login | Registers a login item via `SMAppService` |
@@ -74,8 +73,8 @@ permission state is the first thing the window reports, and it updates live.
 ## App-specific states (experimental)
 
 Some applications keep their own internal states that matter more than their
-windows. With **Use an app's own states** switched on, the rail shows those
-instead.
+windows. With **Use an app's own states** switched on — it lives in the Advanced
+tab — the rail shows those instead.
 
 It is off by default because it depends on undocumented internals of the app in
 question, which that app's next update may change. Whenever those internals

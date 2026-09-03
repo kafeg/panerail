@@ -102,19 +102,23 @@ enum PreviewRenderer {
         )
     }
 
-    /// Renders the General tab's content, so its layout can be checked without
+    /// Renders one settings tab's content, so its layout can be checked without
     /// a Screen Recording grant to capture the real window.
-    static func renderSettings(to path: String, dark: Bool) -> Bool {
+    static func renderSettings(to path: String, dark: Bool, advanced: Bool = false) -> Bool {
         let suite = UserDefaults(suiteName: "dev.kafeg.panerail.preview") ?? .standard
         suite.removePersistentDomain(forName: "dev.kafeg.panerail.preview")
 
-        let view = GeneralSettingsView(
-            preferences: Preferences(defaults: suite),
-            authorizer: AccessibilityAuthorizer()
-        )
+        let preferences = Preferences(defaults: suite)
+        let view = Group {
+            if advanced {
+                AdvancedSettingsView(preferences: preferences)
+            } else {
+                GeneralSettingsView(preferences: preferences, authorizer: AccessibilityAuthorizer())
+            }
+        }
         .padding(14)
 
-        let size = CGSize(width: 500, height: 410)
+        let size = CGSize(width: 500, height: 370)
         let hosting = NSHostingView(rootView: view)
         hosting.frame = CGRect(origin: .zero, size: size)
 

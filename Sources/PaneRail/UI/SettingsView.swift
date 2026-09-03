@@ -12,9 +12,12 @@ struct SettingsView: View {
 
             AppsSettingsView(preferences: preferences)
                 .tabItem { Label("Apps", systemImage: "square.grid.2x2") }
+
+            AdvancedSettingsView(preferences: preferences)
+                .tabItem { Label("Advanced", systemImage: "flask") }
         }
         .padding(14)
-        .frame(width: 500, height: 470)
+        .frame(width: 500, height: 430)
     }
 }
 
@@ -97,18 +100,6 @@ struct GeneralSettingsView: View {
                              : "Apps with fewer windows are skipped.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                    }
-                }
-
-                GridRow {
-                    label("App states")
-                    VStack(alignment: .leading, spacing: 2) {
-                        Toggle("Use an app's own states", isOn: $preferences.appSpecificProviders)
-                        Text("Experimental. Vivaldi shows its workspaces instead of windows — the first \(VivaldiRailProvider.switchableCount) only, the limit of its own shortcuts. Relies on undocumented internals that a Vivaldi update may break.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(width: 300, alignment: .leading)
                     }
                 }
 
