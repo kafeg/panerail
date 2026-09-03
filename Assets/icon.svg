@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>PaneRail</title>
+  <defs>
+    <linearGradient id="backdrop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3A4256"/>
+      <stop offset="100%" stop-color="#191C27"/>
+    </linearGradient>
+    <linearGradient id="rail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6FA8FF"/>
+      <stop offset="100%" stop-color="#2F6BE0"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.16"/>
+      <stop offset="55%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App icon plate, sized to the macOS content box inside a 1024 canvas. -->
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="url(#backdrop)"/>
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="url(#sheen)"/>
+  <rect x="100.5" y="100.5" width="823" height="823" rx="183.5"
+        fill="none" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="3"/>
+
+  <!-- The rail itself. -->
+  <rect x="214" y="300" width="62" height="424" rx="31" fill="url(#rail)"/>
+
+  <!-- Windows lined up along it; the top one is the active window. The punched
+       out dot is what keeps these reading as windows rather than list rows. -->
+  <g fill="#FFFFFF">
+    <rect x="330" y="300" width="486" height="108" rx="26" fill-opacity="0.96"/>
+    <rect x="330" y="458" width="486" height="108" rx="26" fill-opacity="0.52"/>
+    <rect x="330" y="616" width="486" height="108" rx="26" fill-opacity="0.34"/>
+  </g>
+  <g fill="#222633">
+    <circle cx="372" cy="354" r="15"/>
+    <circle cx="372" cy="512" r="15" fill-opacity="0.75"/>
+    <circle cx="372" cy="670" r="15" fill-opacity="0.6"/>
+  </g>
+</svg>

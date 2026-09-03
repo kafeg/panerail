@@ -1,0 +1,30 @@
+# Xcode / build
+build/
+DerivedData/
+*.xcodeproj
+*.xcworkspace
+!*.xcworkspace/contents.xcworkspacedata
+xcuserdata/
+*.xcuserstate
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Generated artefacts
+dist/
+# Written by XcodeGen from project.yml
+Sources/PaneRail/Info.plist
+# Coverage output left behind by running binaries directly
+*.profraw
+Assets/AppIcon.iconset/
+Sources/PaneRail/Assets.xcassets/AppIcon.appiconset/*.png
+
+# macOS
+.DS_Store
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/

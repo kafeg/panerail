@@ -1,0 +1,106 @@
+name: PaneRail
+
+options:
+  bundleIdPrefix: dev.kafeg
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+  minimumXcodeGenVersion: "2.38.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGNING_REQUIRED: YES
+    CODE_SIGNING_ALLOWED: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    GCC_WARN_UNUSED_VARIABLE: YES
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
+
+targets:
+  # Pure logic + AX plumbing, split out so the unit tests can link against it
+  # without dragging in the UI or needing a host app.
+  #
+  # Static rather than a framework on purpose: the hardened runtime enables
+  # library validation, which refuses to load an embedded framework whose
+  # ad-hoc signature was produced independently of the app's. Linking
+  # statically leaves one self-contained binary and sidesteps that entirely.
+  PaneRailKit:
+    type: library.static
+    platform: macOS
+    sources:
+      - Sources/PaneRailKit
+    settings:
+      base:
+        PRODUCT_NAME: PaneRailKit
+        SKIP_INSTALL: YES
+
+  PaneRail:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/PaneRail
+      - path: Assets/AppIcon.icns
+        buildPhase: resources
+        optional: true
+    dependencies:
+      - target: PaneRailKit
+        embed: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.kafeg.panerail
+        PRODUCT_NAME: PaneRail
+        ENABLE_HARDENED_RUNTIME: YES
+        COMBINE_HIDPI_IMAGES: YES
+    info:
+      path: Sources/PaneRail/Info.plist
+      properties:
+        CFBundleName: PaneRail
+        CFBundleDisplayName: PaneRail
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleIconFile: AppIcon
+        CFBundlePackageType: APPL
+        LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
+        # Accessory app: no Dock tile, no menu bar of its own.
+        LSUIElement: true
+        NSHumanReadableCopyright: "MIT License. Copyright (c) 2026 kafeg."
+        NSPrincipalClass: NSApplication
+        NSSupportsAutomaticTermination: false
+        NSSupportsSuddenTermination: false
+
+  PaneRailKitTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/PaneRailKitTests
+    dependencies:
+      - target: PaneRailKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.kafeg.panerail.kit.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  PaneRail:
+    build:
+      targets:
+        PaneRail: all
+        PaneRailKitTests: [test]
+    run:
+      config: Debug
+      commandLineArguments:
+        "--demo": false
+    test:
+      config: Debug
+      gatherCoverageData: true
+      coverageTargets:
+        - PaneRailKit
+      targets:
+        - PaneRailKitTests
+    archive:
+      config: Release

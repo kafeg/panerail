@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Test
+        run: |
+          xcodebuild \
+            -project PaneRail.xcodeproj \
+            -scheme PaneRail \
+            -configuration Debug \
+            -derivedDataPath build \
+            test
+
+      - name: Build Release
+        run: |
+          xcodebuild \
+            -project PaneRail.xcodeproj \
+            -scheme PaneRail \
+            -configuration Release \
+            -derivedDataPath build \
+            build

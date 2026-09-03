@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Derive version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Test
+        run: |
+          xcodebuild \
+            -project PaneRail.xcodeproj \
+            -scheme PaneRail \
+            -configuration Debug \
+            -derivedDataPath build \
+            test
+
+      - name: Build Release
+        run: |
+          xcodebuild \
+            -project PaneRail.xcodeproj \
+            -scheme PaneRail \
+            -configuration Release \
+            -derivedDataPath build \
+            MARKETING_VERSION="${{ steps.version.outputs.version }}" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            build
+
+      # Signing and notarisation go here once an Apple Developer ID is available:
+      #
+      #   1. Store the Developer ID .p12 and its password, plus an App Store
+      #      Connect API key, as repository secrets.
+      #   2. Import the certificate into a temporary keychain.
+      #   3. Re-sign with CODE_SIGN_IDENTITY="Developer ID Application: ..."
+      #      and ENABLE_HARDENED_RUNTIME=YES.
+      #   4. xcrun notarytool submit --wait, then xcrun stapler staple.
+      #
+      # Until then the build is ad-hoc signed: Gatekeeper needs the user to
+      # right-click and choose Open the first time.
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent \
+            build/Build/Products/Release/PaneRail.app \
+            "dist/PaneRail-${{ steps.version.outputs.version }}.zip"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "PaneRail ${{ steps.version.outputs.version }}" \
+            --generate-notes \
+            dist/*.zip
