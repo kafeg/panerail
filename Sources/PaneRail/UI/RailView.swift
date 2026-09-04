@@ -68,25 +68,31 @@ struct RailView: View {
     }
 
     /// The handle for the horizontal layout, which has no header to grab.
+    ///
+    /// The drag surface sits *above* the dots rather than behind them: a
+    /// SwiftUI view with a content shape swallows the mouse-down, so a handle
+    /// placed in the background never sees the click that would start the drag.
     private var stripGrip: some View {
-        // Drawn rather than an SF Symbol: the obvious symbol names for a grip
-        // do not all exist, and a missing one renders as nothing at all.
-        HStack(spacing: 3) {
-            ForEach(0..<2, id: \.self) { _ in
-                VStack(spacing: 3) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        Circle().frame(width: 2, height: 2)
+        ZStack {
+            // Drawn rather than an SF Symbol: the obvious symbol names for a
+            // grip do not all exist, and a missing one renders as nothing.
+            HStack(spacing: 3) {
+                ForEach(0..<2, id: \.self) { _ in
+                    VStack(spacing: 3) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            Circle().frame(width: 2, height: 2)
+                        }
                     }
                 }
             }
-        }
             .foregroundStyle(Color.secondary)
             .opacity(isHoveringGrip ? 0.95 : 0.5)
-            .frame(width: RailGeometry.stripLeading, height: RailGeometry.stripHeight)
-            .contentShape(Rectangle())
-            .onHover { isHoveringGrip = $0 }
-            .background(WindowDragHandle())
-            .help("Drag to move")
+
+            WindowDragHandle()
+        }
+        .frame(width: RailGeometry.stripLeading, height: RailGeometry.stripHeight)
+        .onHover { isHoveringGrip = $0 }
+        .help("Drag to move")
     }
 
     /// The horizontal layout: glyphs only, with the name in a tooltip.
