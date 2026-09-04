@@ -70,6 +70,8 @@ public enum RailVisibility {
             return true
         case .listedApps:
             return input.listedBundleIDs.contains(bundleID)
+        case .exceptListedApps:
+            return !input.listedBundleIDs.contains(bundleID)
         }
     }
 }

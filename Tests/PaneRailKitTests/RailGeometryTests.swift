@@ -87,11 +87,11 @@ final class RailGeometryTests: XCTestCase {
         XCTAssertEqual(clamped, CGPoint(x: screen.minX, y: screen.minY))
     }
 
-    func testDefaultOriginSitsAtRightEdgeAndIsVerticallyCentred() {
+    func testDefaultOriginSitsInTheTopRightCorner() {
         let size = CGSize(width: 220, height: 200)
         let origin = RailGeometry.defaultOrigin(size: size, in: screen)
         XCTAssertEqual(origin.x, screen.maxX - size.width - RailGeometry.screenMargin)
-        XCTAssertEqual(origin.y, screen.midY - size.height / 2, accuracy: 0.001)
+        XCTAssertEqual(origin.y, screen.maxY - size.height - RailGeometry.screenMargin, accuracy: 0.001)
     }
 
     func testDefaultOriginRespectsScreenOffset() {

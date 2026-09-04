@@ -145,6 +145,7 @@ final class PreferencesTests: XCTestCase {
 
     func testSharedModeGivesEveryAppTheSamePosition() {
         let preferences = makePreferences()
+        preferences.positionMode = .shared
         preferences.setOrigin(CGPoint(x: 10, y: 20), for: "com.example.a")
 
         XCTAssertEqual(preferences.origin(for: "com.example.a"), CGPoint(x: 10, y: 20))
@@ -161,14 +162,15 @@ final class PreferencesTests: XCTestCase {
         XCTAssertEqual(preferences.origin(for: "com.example.b"), CGPoint(x: 90, y: 80))
     }
 
-    /// An app seen for the first time should appear where the rail was last
-    /// left, not jump back to the screen edge.
-    func testAnAppWithNoPositionInheritsTheLastOneUsed() {
+    /// An app the rail has never been placed for starts at the default
+    /// position. Inheriting another application's spot would put it somewhere
+    /// the user never chose for the app in front of them.
+    func testAnAppWithNoPositionOfItsOwnHasNone() {
         let preferences = makePreferences()
-        preferences.positionMode = .perApp
         preferences.setOrigin(CGPoint(x: 33, y: 44), for: "com.example.a")
 
-        XCTAssertEqual(preferences.origin(for: "com.example.newcomer"), CGPoint(x: 33, y: 44))
+        XCTAssertNil(preferences.origin(for: "com.example.newcomer"))
+        XCTAssertNil(preferences.origin(for: nil))
     }
 
     func testPerAppPositionsSurviveARestart() {
@@ -209,7 +211,7 @@ final class PreferencesTests: XCTestCase {
 
     func testPositionDefaults() {
         let preferences = makePreferences()
-        XCTAssertEqual(preferences.positionMode, .shared)
+        XCTAssertEqual(preferences.positionMode, .perApp, "positions are per application unless asked otherwise")
         XCTAssertFalse(preferences.vivaldiIconStrip)
     }
 

@@ -100,6 +100,25 @@ final class RailVisibilityTests: XCTestCase {
         ))
     }
 
+    func testExceptListedModeHidesOnlyTheTickedApps() {
+        let listed: Set<String> = ["com.example.editor"]
+        XCTAssertFalse(RailVisibility.shouldShow(
+            input(mode: .exceptListedApps, listed: listed)
+        ))
+        XCTAssertTrue(RailVisibility.shouldShow(
+            input(bundleID: "com.example.other", mode: .exceptListedApps, listed: listed)
+        ))
+    }
+
+    func testExceptListedModeStillRespectsExclusionsAndThreshold() {
+        XCTAssertFalse(RailVisibility.shouldShow(
+            input(bundleID: "dev.kafeg.panerail", mode: .exceptListedApps)
+        ))
+        XCTAssertFalse(RailVisibility.shouldShow(
+            input(itemCount: 1, mode: .exceptListedApps, minimumItems: 2)
+        ))
+    }
+
     func testListedModeStillRespectsThreshold() {
         XCTAssertFalse(RailVisibility.shouldShow(
             input(itemCount: 1, mode: .listedApps, minimumItems: 2, listed: ["com.example.editor"])

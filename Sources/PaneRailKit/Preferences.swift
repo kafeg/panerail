@@ -6,7 +6,9 @@ import Foundation
 public enum RailPositionMode: String, CaseIterable, Identifiable, Codable {
     /// One position, wherever the rail was last dropped.
     case shared
-    /// Each application remembers where its rail was left.
+    /// Each application remembers where its rail was left. An application that
+    /// has not been placed yet opens at the default position rather than
+    /// borrowing another application's.
     case perApp
 
     public var id: String { rawValue }
@@ -18,6 +20,8 @@ public enum RailMode: String, CaseIterable, Identifiable, Codable {
     case allApps
     /// Only apps the user explicitly added.
     case listedApps
+    /// Every app except the ones the user added.
+    case exceptListedApps
 
     public var id: String { rawValue }
 }
@@ -145,7 +149,7 @@ public final class Preferences: ObservableObject {
         appSpecificProviders = defaults.object(forKey: Key.appSpecificProviders) as? Bool ?? false
         hidesInFullScreen = defaults.object(forKey: Key.hidesInFullScreen) as? Bool ?? true
         positionMode = (defaults.string(forKey: Key.positionMode)
-            .flatMap(RailPositionMode.init(rawValue:))) ?? .shared
+            .flatMap(RailPositionMode.init(rawValue:))) ?? .perApp
         vivaldiIconStrip = defaults.object(forKey: Key.vivaldiIconStrip) as? Bool ?? false
         storedWidth = min(
             max(defaults.object(forKey: Key.width) as? Double ?? Self.defaultWidth, Self.minimumWidth),
@@ -177,9 +181,10 @@ public final class Preferences: ObservableObject {
     /// `nil` until the user drags the rail somewhere, which is the signal to
     /// fall back to the default placement.
     ///
-    /// This is also the "last used" position: in per-application mode an app
-    /// with no position of its own opens where the rail was most recently left,
-    /// which is far less surprising than having it jump back to the edge.
+    /// Used as the one position in shared mode. Per-application mode keeps its
+    /// own entries and deliberately does not fall back to this: inheriting some
+    /// other application's placement puts the rail somewhere the user never
+    /// chose for the app they are looking at.
     public var savedOrigin: CGPoint? {
         get { point(forKey: Key.originX, Key.originY) }
         set {
@@ -194,18 +199,15 @@ public final class Preferences: ObservableObject {
         case .shared:
             return savedOrigin
         case .perApp:
-            guard let bundleIdentifier, let stored = originsByApp[bundleIdentifier] else {
-                return savedOrigin
-            }
-            return stored
+            guard let bundleIdentifier else { return nil }
+            return originsByApp[bundleIdentifier]
         }
     }
 
     /// Records where the user dropped the rail.
     ///
-    /// The shared position is updated in both modes, so it always means "the
-    /// last place the user chose" and can serve as the fallback for an app that
-    /// has no position yet.
+    /// The shared position is updated in both modes, so switching to shared
+    /// mode lands the rail where it was last dropped rather than at the edge.
     public func setOrigin(_ origin: CGPoint, for bundleIdentifier: String?) {
         if positionMode == .perApp, let bundleIdentifier {
             var origins = originsByApp

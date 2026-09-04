@@ -71,11 +71,12 @@ public enum RailGeometry {
         }
     }
 
-    /// First-run placement: right edge, vertically centred.
+    /// Placement for an app the rail has not been positioned for: the top
+    /// right corner, clear of the menu bar.
     public static func defaultOrigin(size: CGSize, in visibleFrame: CGRect) -> CGPoint {
         let origin = CGPoint(
             x: visibleFrame.maxX - size.width - screenMargin,
-            y: visibleFrame.midY - size.height / 2
+            y: visibleFrame.maxY - size.height - screenMargin
         )
         return clamp(origin: origin, size: size, into: visibleFrame)
     }

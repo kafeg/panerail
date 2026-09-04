@@ -144,7 +144,7 @@ enum PreviewRenderer {
         }
         .padding(14)
 
-        let size = CGSize(width: 500, height: 432)
+        let size = CGSize(width: 500, height: 485)
         let hosting = NSHostingView(rootView: view)
         hosting.frame = CGRect(origin: .zero, size: size)
 

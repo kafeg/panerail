@@ -15,7 +15,7 @@ struct SettingsView: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(14)
-        .frame(width: 500, height: 492)
+        .frame(width: 500, height: 545)
     }
 
     private var tabs: some View {
@@ -86,17 +86,24 @@ struct GeneralSettingsView: View {
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 12) {
                 GridRow {
                     label("Rail")
-                    Toggle("Show the rail", isOn: $preferences.isEnabled)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle("Show the rail", isOn: $preferences.isEnabled)
+                        hint("Turns the rail off without quitting PaneRail.")
+                    }
                 }
 
                 GridRow {
                     label("Show for")
-                    Picker("", selection: $preferences.mode) {
-                        Text("All applications").tag(RailMode.allApps)
-                        Text("Only selected applications").tag(RailMode.listedApps)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Picker("", selection: $preferences.mode) {
+                            Text("All applications").tag(RailMode.allApps)
+                            Text("Only selected applications").tag(RailMode.listedApps)
+                            Text("All except selected").tag(RailMode.exceptListedApps)
+                        }
+                        .labelsHidden()
+                        .frame(width: 230, alignment: .leading)
+                        hint(modeHint)
                     }
-                    .labelsHidden()
-                    .frame(width: 230, alignment: .leading)
                 }
 
                 GridRow {
@@ -106,11 +113,9 @@ struct GeneralSettingsView: View {
                             Text("\(preferences.minimumWindows) window\(preferences.minimumWindows == 1 ? "" : "s")")
                         }
                         .frame(width: 130, alignment: .leading)
-                        Text(preferences.minimumWindows == 1
+                        hint(preferences.minimumWindows == 1
                              ? "Shown even for single-window apps."
                              : "Apps with fewer windows are skipped.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -118,23 +123,24 @@ struct GeneralSettingsView: View {
                     label("Full screen")
                     VStack(alignment: .leading, spacing: 2) {
                         Toggle("Hide while a window fills the screen", isOn: $preferences.hidesInFullScreen)
-                        Text("Keeps the rail out of video and presentations.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        hint("Keeps the rail out of video and presentations.")
                     }
                 }
 
                 GridRow {
                     label("Width")
-                    HStack(spacing: 8) {
-                        Slider(
-                            value: $preferences.width,
-                            in: Preferences.minimumWidth...Preferences.maximumWidth
-                        )
-                        .frame(width: 190)
-                        Text("\(Int(preferences.width)) pt")
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 8) {
+                            Slider(
+                                value: $preferences.width,
+                                in: Preferences.minimumWidth...Preferences.maximumWidth
+                            )
+                            .frame(width: 190)
+                            Text("\(Int(preferences.width)) pt")
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                        hint("Applies to the list; a row of icons sizes itself.")
                     }
                 }
 
@@ -150,10 +156,9 @@ struct GeneralSettingsView: View {
 
                         HStack(spacing: 8) {
                             Button("Reset") { preferences.resetPositions() }
-                            Text("Drag the rail by its header to move it.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            hint("Drag the rail by its handle to move it.")
                         }
+                        hint(positionHint)
                     }
                 }
 
@@ -165,6 +170,7 @@ struct GeneralSettingsView: View {
                                 launchAtLoginFailed = !LaunchAtLogin.set(newValue)
                                 if launchAtLoginFailed { launchAtLogin = LaunchAtLogin.isEnabled }
                             }
+                        hint("Opens PaneRail automatically after you log in.")
                         if launchAtLoginFailed {
                             Text("macOS refused the login item — expected for unsigned builds outside /Applications.")
                                 .font(.caption)
@@ -177,6 +183,31 @@ struct GeneralSettingsView: View {
 
             Spacer(minLength: 0)
         }
+    }
+
+    private var modeHint: String {
+        switch preferences.mode {
+        case .allApps:
+            return "Every application that has enough windows."
+        case .listedApps:
+            return "Only the applications ticked in the Apps tab."
+        case .exceptListedApps:
+            return "Every application except the ones ticked in the Apps tab."
+        }
+    }
+
+    private var positionHint: String {
+        preferences.positionMode == .perApp
+            ? "Each application keeps its own spot; one you have not placed yet starts in the top right corner."
+            : "One spot for everything, wherever you last dropped the rail."
+    }
+
+    private func hint(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(width: 300, alignment: .leading)
     }
 
     private func label(_ text: String) -> some View {
@@ -192,11 +223,9 @@ struct AppsSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(preferences.mode == .listedApps
-                 ? "The rail appears only for the applications ticked below."
-                 : "The rail currently appears for every application. Switch to “Only selected applications” in General to use this list.")
+            Text(listPurpose)
                 .font(.callout)
-                .foregroundStyle(preferences.mode == .listedApps ? Color.primary : Color.secondary)
+                .foregroundStyle(preferences.mode == .allApps ? Color.secondary : Color.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
             List {
@@ -218,7 +247,7 @@ struct AppsSettingsView: View {
                 }
             }
             .listStyle(.bordered(alternatesRowBackgrounds: true))
-            .disabled(preferences.mode != .listedApps)
+            .disabled(preferences.mode == .allApps)
 
             HStack {
                 Button("Refresh") { reload() }
@@ -229,6 +258,20 @@ struct AppsSettingsView: View {
             }
         }
         .onAppear(perform: reload)
+    }
+
+    /// What ticking a box in this list actually does depends on the mode
+    /// chosen in General, so the list says so rather than leaving the user to
+    /// remember.
+    private var listPurpose: String {
+        switch preferences.mode {
+        case .allApps:
+            return "The rail currently appears for every application. Choose “Only selected applications” or “All except selected” in General to use this list."
+        case .listedApps:
+            return "The rail appears only for the applications ticked below."
+        case .exceptListedApps:
+            return "The rail appears everywhere except the applications ticked below."
+        }
     }
 
     private var selectionSummary: String {

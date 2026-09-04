@@ -78,11 +78,11 @@ permission state is the first thing the window reports, and it updates live.
 
 | Setting | What it does |
 | --- | --- |
-| Show for | All applications, or only the ones ticked in the Apps tab |
+| Show for | Every application, only the ones ticked in the Apps tab, or everything except those |
 | Appear from *n* windows | The rail stays hidden below this many windows. Set it to 1 to always show it |
 | Hide in full screen | Gets out of the way while a window fills the screen. On by default |
 | Width | 160–380 pt |
-| Position | One position for everything, or one remembered per application. An app seen for the first time opens where the rail was last left |
+| Position | One remembered per application by default, or one position for everything. An application the rail has not been placed for opens in the top right corner |
 | Launch at login | Registers a login item via `SMAppService` |
 
 ## App-specific states (experimental)
