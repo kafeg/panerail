@@ -101,9 +101,13 @@ is a dropdown at the top of the window. The rail lists the workspaces, marks the
 active one and switches with a click.
 
 It can also show them as a row of glyphs instead of a list of names — Vivaldi
-stores each workspace's icon as inline SVG, so those are the real icons, and the
-name appears in a tooltip. Switch it on under Supported applications; the rail
-falls back to the list if any workspace has no icon.
+stores each workspace's icon as inline SVG, so those are the real icons. Switch
+it on under Supported applications; the rail falls back to the list if any
+workspace has no icon.
+
+Names are not shown in that layout. macOS draws tooltips only for the active
+application, and the rail never becomes active — which is precisely what keeps
+clicking it from stealing focus.
 
 <div align="center">
   <img src="docs/strip-light.png" width="230" alt="Vivaldi workspaces as a row of icons">

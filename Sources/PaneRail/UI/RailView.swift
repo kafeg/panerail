@@ -138,6 +138,9 @@ struct RailView: View {
                 }
             }
             .onTapGesture { onSelect(item) }
+            // Only ever seen while PaneRail happens to be the active app,
+            // such as when its settings window is open: macOS does not draw
+            // tooltips for an inactive one, and the rail is inactive by design.
             .help(item.title)
     }
 

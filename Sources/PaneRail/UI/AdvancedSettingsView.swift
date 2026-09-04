@@ -53,9 +53,10 @@ struct AdvancedSettingsView: View {
 
                         Toggle("Show as a row of icons", isOn: $preferences.vivaldiIconStrip)
                         Text("""
-                        Each workspace becomes its own glyph, with the name in \
-                        a tooltip. Falls back to the list when a workspace has \
-                        no icon.
+                        Each workspace becomes its own glyph. Names are not shown: \
+                        macOS draws tooltips only for the active application, and \
+                        the rail never becomes one, which is what stops it stealing \
+                        focus. Falls back to the list when a workspace has no icon.
                         """)
                             .font(.caption)
                             .foregroundStyle(.secondary)
