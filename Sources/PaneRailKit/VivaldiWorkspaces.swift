@@ -25,6 +25,24 @@ public enum VivaldiWorkspacesError: Error, Equatable {
     case unexpectedLayout
 }
 
+/// Why the workspace list is or is not available.
+///
+/// Everything here reads undocumented internals, so failure is normal and
+/// recoverable — but a silent fall back to window switching is indistinguishable
+/// from the feature being broken, so the reason is reported.
+public enum VivaldiWorkspacesStatus: Equatable {
+    /// No Vivaldi profile where one is expected.
+    case profileNotFound
+    /// The file is there but could not be read or is not JSON.
+    case unreadable
+    /// Read fine, but the workspace list is not where it used to be — most
+    /// likely a Vivaldi update moved it.
+    case unexpectedLayout
+    /// Read fine, and Vivaldi has no workspaces yet.
+    case noWorkspaces
+    case ok(count: Int)
+}
+
 /// Reads Vivaldi's workspaces out of its profile.
 ///
 /// Vivaldi exposes no API for this: the `vivaldi.*` JavaScript namespace is
@@ -64,6 +82,22 @@ public enum VivaldiWorkspaces {
             else { return nil }
             let id = (item["id"] as? NSNumber)?.doubleValue ?? Double(index)
             return VivaldiWorkspace(id: id, name: name, index: index, icon: item["icon"] as? String)
+        }
+    }
+
+    /// The same read as `load`, but reporting what went wrong.
+    public static func status(at url: URL? = nil) -> VivaldiWorkspacesStatus {
+        let url = url ?? preferencesURL()
+        guard FileManager.default.fileExists(atPath: url.path) else { return .profileNotFound }
+        guard let data = try? Data(contentsOf: url) else { return .unreadable }
+
+        do {
+            let workspaces = try parse(preferences: data)
+            return workspaces.isEmpty ? .noWorkspaces : .ok(count: workspaces.count)
+        } catch VivaldiWorkspacesError.unexpectedLayout {
+            return .unexpectedLayout
+        } catch {
+            return .unreadable
         }
     }
 

@@ -6,6 +6,10 @@ import SwiftUI
 struct AdvancedSettingsView: View {
     @ObservedObject var preferences: Preferences
 
+    /// Read when the window opens rather than on every redraw: the profile is
+    /// a sizeable JSON file and nothing here changes second to second.
+    @State private var vivaldiStatus: VivaldiWorkspacesStatus?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 6) {
@@ -51,7 +55,10 @@ struct AdvancedSettingsView: View {
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
 
+                        vivaldiStatusLine
+
                         Toggle("Show as a row of icons", isOn: $preferences.vivaldiIconStrip)
+                            .disabled(!preferences.appSpecificProviders)
                         Text("""
                         Each workspace becomes its own glyph. Names are not shown: \
                         macOS draws tooltips only for the active application, and \
@@ -74,11 +81,36 @@ struct AdvancedSettingsView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                .disabled(!preferences.appSpecificProviders)
-                .opacity(preferences.appSpecificProviders ? 1 : 0.5)
             }
 
             Spacer(minLength: 0)
+        }
+        .onAppear { vivaldiStatus = VivaldiWorkspaces.status() }
+    }
+
+    /// Says what the profile read produced. Without this a Vivaldi update that
+    /// moves the workspace list looks exactly like the feature being broken:
+    /// the rail just goes back to showing windows.
+    @ViewBuilder
+    private var vivaldiStatusLine: some View {
+        if let status = vivaldiStatus {
+            HStack(alignment: .top, spacing: 5) {
+                Image(systemName: status.isHealthy ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    .foregroundStyle(status.isHealthy ? Color.green : Color.orange)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(status.summary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    // Only worth offering once there is something to fix.
+                    if !status.isHealthy {
+                        Button("Recheck") { vivaldiStatus = VivaldiWorkspaces.status() }
+                            .buttonStyle(.link)
+                    }
+                }
+            }
+            .frame(width: 400, alignment: .leading)
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 }

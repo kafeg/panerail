@@ -59,4 +59,7 @@ assumed:
   rather than draw a distorted shape.
 
 All of it is undocumented internal structure, so every failure is soft: the app
-falls back to plain window switching rather than showing nothing.
+falls back to plain window switching rather than showing nothing. Because that
+fallback is indistinguishable from the feature being broken, the Advanced tab
+reports what the profile read produced — including, by name, the case where a
+Vivaldi update has moved the list.

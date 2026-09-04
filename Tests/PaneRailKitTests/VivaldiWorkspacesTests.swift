@@ -69,3 +69,48 @@ final class VivaldiWorkspacesTests: XCTestCase {
         XCTAssertTrue(VivaldiWorkspaces.load(from: url).isEmpty)
     }
 }
+
+final class VivaldiWorkspacesStatusTests: XCTestCase {
+    private var fileURL: URL!
+
+    override func setUp() {
+        super.setUp()
+        fileURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("panerail-status-\(UUID().uuidString).json")
+    }
+
+    override func tearDown() {
+        try? FileManager.default.removeItem(at: fileURL)
+        super.tearDown()
+    }
+
+    private func write(_ json: String) {
+        try? Data(json.utf8).write(to: fileURL)
+    }
+
+    func testReportsHowManyWorkspacesWereFound() {
+        write(#"{"vivaldi":{"workspaces":{"list":[{"id":1,"name":"Work"},{"id":2,"name":"Home"}]}}}"#)
+        XCTAssertEqual(VivaldiWorkspaces.status(at: fileURL), .ok(count: 2))
+    }
+
+    func testReportsAMissingProfile() {
+        XCTAssertEqual(VivaldiWorkspaces.status(at: fileURL), .profileNotFound)
+    }
+
+    func testReportsAnUnreadableFile() {
+        write("{not json")
+        XCTAssertEqual(VivaldiWorkspaces.status(at: fileURL), .unreadable)
+    }
+
+    /// The case worth telling the user about by name: a Vivaldi update moved
+    /// the list, and no amount of retrying will help.
+    func testReportsAnUnfamiliarLayout() {
+        write(#"{"vivaldi":{"workspaces":{}}}"#)
+        XCTAssertEqual(VivaldiWorkspaces.status(at: fileURL), .unexpectedLayout)
+    }
+
+    func testDistinguishesNoWorkspacesFromAFailure() {
+        write(#"{"vivaldi":{"workspaces":{"list":[]}}}"#)
+        XCTAssertEqual(VivaldiWorkspaces.status(at: fileURL), .noWorkspaces)
+    }
+}
