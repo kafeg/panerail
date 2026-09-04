@@ -25,71 +25,76 @@ gets out of the way.
 - **Follows the front app.** The rail always describes the app you are looking at.
 - **Never steals focus.** Clicking the rail does not change which app is active.
 - **Stays out of the way.** Hidden until an app has more than one window, and
-  while a window fills the screen. The threshold is configurable, as is an allow
-  list of specific apps.
-- **Drag it anywhere** by its header. The position is remembered.
+  while a window fills the screen.
+- **Goes where you put it.** Drag it by its handle; each app remembers its own spot.
 - **Minimised windows included**, shown dimmed, and restored when clicked.
 - **No Dock icon.** It lives in the menu bar, where the icon turns into a
   warning sign if Accessibility access is missing.
 
 ## Install
 
-### From source (no Gatekeeper prompts)
+### From a release
 
-Locally built apps are never quarantined, so this is the smoothest route:
+1. Download `PaneRail-x.y.z.zip` from
+   [Releases](https://github.com/kafeg/panerail/releases).
+2. Double-click the archive in Finder to unpack it.
+3. Drag `PaneRail.app` into your **Applications** folder.
+4. Double-click it. macOS refuses to open it — that is expected, see below.
 
-```sh
-git clone https://github.com/kafeg/panerail.git
-cd panerail
-make dev-certificate   # once: keeps the Accessibility grant across rebuilds
-make install
-```
+### Letting macOS open it
 
-### From Releases
+Releases are not notarised, so Gatekeeper blocks the first launch. On macOS 15
+and later the old Control-click shortcut no longer works. Instead:
 
-Download the latest `PaneRail.zip` from
-[Releases](https://github.com/kafeg/panerail/releases), unzip it and move
-`PaneRail.app` to `/Applications`.
+1. Open **System Settings › Privacy & Security**.
+2. Scroll down to **Security**. There is a line saying PaneRail was blocked.
+3. Click **Open Anyway** and confirm with Touch ID or your password.
+4. Launch PaneRail again and click **Open** in the dialog that appears.
 
-Releases are not notarised, so macOS blocks the first launch. On macOS 15 and
-later the old Control-click shortcut no longer works: open **System Settings ›
-Privacy & Security**, scroll to the message naming PaneRail, click **Open
-Anyway** and confirm with your password. This is needed once per version.
+This is needed once per version. Building from source skips it entirely — a
+locally built app is never quarantined; see
+[docs/BUILDING.md](docs/BUILDING.md).
 
-### Accessibility permission
+### Granting Accessibility access
 
-PaneRail needs Accessibility access in **System Settings › Privacy & Security ›
-Accessibility**. It is the only API macOS offers for reading and raising another
-app's windows, so without it the rail has nothing to show. The app asks on first
-launch and starts working the moment the switch is flipped — no restart needed.
+PaneRail then asks for Accessibility access in **System Settings › Privacy &
+Security › Accessibility**. It is the only API macOS offers for reading and
+raising another app's windows, so without it the rail has nothing to show. The
+rail appears the moment the switch is flipped — no restart needed.
 
-It reads window titles only. It never records the screen, and deliberately
-avoids `CGWindowList`, which would have required the Screen Recording permission
-just to see titles.
+It reads window titles only. It never records the screen, and never sends
+anything anywhere.
+
+> If PaneRail is already switched on in that list and the rail still does not
+> appear, remove it with **−** and add it again. macOS ties the permission to
+> the app's signature, so an update invalidates it while the switch still looks
+> on.
 
 ## Settings
 
-Open them from the gear in the rail's header or from the menu bar icon. The
+Open them from the gear in the rail's handle or from the menu bar icon. The
 permission state is the first thing the window reports, and it updates live.
 
 <div align="center">
-  <img src="docs/settings-light.png" width="440" alt="PaneRail settings">
+  <img src="docs/settings-light.png" width="430" alt="General settings">
+  <img src="docs/advanced-light.png" width="430" alt="Advanced settings">
 </div>
 
 | Setting | What it does |
 | --- | --- |
+| Show the rail | Turns the rail off without quitting |
 | Show for | Every application, only the ones ticked in the Apps tab, or everything except those |
 | Appear from *n* windows | The rail stays hidden below this many windows. Set it to 1 to always show it |
-| Hide in full screen | Gets out of the way while a window fills the screen. On by default |
+| Hide in full screen | Gets out of the way while a window fills the screen |
 | Width | 160–380 pt |
-| Position | One remembered per application by default, or one position for everything. An application the rail has not been placed for opens in the top right corner |
+| Position | Remembered per application, or one position for everything. An application the rail has not been placed for opens in the top right corner |
 | Launch at login | Registers a login item via `SMAppService` |
 
 ## App-specific states (experimental)
 
 Some applications keep their own internal states that matter more than their
-windows. With **Use an app's own states** switched on — it lives in the Advanced
-tab — the rail shows those instead.
+windows. With **Use an app's own states** switched on, in the Advanced tab, the
+rail shows those instead.
 
 It is off by default because it depends on undocumented internals of the app in
 question, which that app's next update may change. Whenever those internals
@@ -100,108 +105,38 @@ window, so window switching does not help with them at all, and its own picker
 is a dropdown at the top of the window. The rail lists the workspaces, marks the
 active one and switches with a click.
 
-It can also show them as a row of glyphs instead of a list of names — Vivaldi
-stores each workspace's icon as inline SVG, so those are the real icons. Switch
-it on under Supported applications; the rail falls back to the list if any
-workspace has no icon.
+It can also show them as a row of glyphs — Vivaldi stores each workspace's icon
+as inline SVG, so those are the real icons:
 
-Names are not shown in that layout. macOS draws tooltips only for the active
+<div align="center">
+  <img src="docs/strip-light.png" width="260" alt="Vivaldi workspaces as a row of icons">
+  <img src="docs/strip-dark.png" width="260" alt="The same row in dark appearance">
+</div>
+
+Names are not shown in that layout: macOS draws tooltips only for the active
 application, and the rail never becomes active — which is precisely what keeps
 clicking it from stealing focus.
 
-<div align="center">
-  <img src="docs/strip-light.png" width="230" alt="Vivaldi workspaces as a row of icons">
-</div>
-
-Two limits worth knowing. Only the first eight workspaces can be switched to:
-switching works by sending Vivaldi's own keyboard shortcut, and Vivaldi binds
-shortcuts to that many, so later ones are listed but dimmed. And a Vivaldi
-update may break this at any time.
-
-## Building from source
-
-Requires Xcode 16 or newer and [XcodeGen](https://github.com/yonaskolb/XcodeGen)
-(`brew install xcodegen`). The `.xcodeproj` is generated from `project.yml` and
-is not checked in.
-
-```sh
-make build            # build the Debug app
-make test             # run the unit tests
-make demo             # launch against scripted windows, no permission needed
-make install          # build Release and update /Applications in place
-make package          # build Release and zip it into dist/
-```
-
-`make demo` is the fastest way to work on the UI: it swaps the Accessibility
-window source for fixed sample data, so nothing needs to be granted.
-
-### Keeping the Accessibility grant across rebuilds
-
-macOS ties the grant to the app's code signature, and ad-hoc signing produces a
-new identity on every build — so the permission is lost each time. Run
-`make dev-certificate` once to create a local self-signed certificate; `make`
-then signs with it and the grant survives. Note that `make install` updates the
-bundle in place for the same reason: deleting the app first makes macOS forget
-the entry however stable the signature is.
-
-If the rail stops appearing after a rebuild anyway, `make reset-permission`
-clears the stale entries so access can be granted cleanly.
-
-## How it works
-
-Every decision lives in `PaneRailKit`, which the app and the test bundle both
-link, so the logic is covered by unit tests without a window server or a
-permission grant.
-
-| Piece | Role |
-| --- | --- |
-| `FrontmostAppMonitor` | Watches `NSWorkspace` activation, ignoring PaneRail itself |
-| `RailItemProvider` | Supplies the rows for an app and acts on a click |
-| `WindowRailProvider` | The default: windows read and raised through `AXUIElement` |
-| `VivaldiRailProvider` | Workspaces, when app-specific states are switched on |
-| `RailCoordinator` | Picks the provider, holds the rows, decides visibility |
-| `RailVisibility` / `RailGeometry` | The pure show/hide rule and the panel maths |
-| `RailPanel` | A borderless, non-activating `NSPanel` floating above everything |
-
-`PaneRailKit` is a static library rather than a framework on purpose: the
-hardened runtime enables library validation, which refuses to load an embedded
-framework whose ad-hoc signature was produced independently of the app's.
-
-## Releasing
-
-Versions are `<major>.<minor>.<commits>` — the last component is the commit
-count, stamped into the app at build time, so any build says which commit it
-came from. Only the first two are chosen by hand, in `project.yml`. `make
-version` prints what the next build will call itself, which is the name to give
-the tag.
-
-Pushing a `v*` tag builds, tests, packages and publishes to Releases.
-
-The workflow signs and notarises when these repository secrets are present,
-and falls back to an ad-hoc build when they are not, so it works either way:
-
-| Secret | What it is |
-| --- | --- |
-| `MACOS_CERTIFICATE_P12` | Developer ID Application certificate and key, base64 of a `.p12` |
-| `MACOS_CERTIFICATE_PASSWORD` | The password that `.p12` was exported with |
-| `APPLE_TEAM_ID` | Ten-character team identifier |
-| `NOTARY_API_KEY` | App Store Connect API key, base64 of the `.p8` |
-| `NOTARY_API_KEY_ID` / `NOTARY_API_ISSUER_ID` | That key's id and issuer |
-
-All of them require a paid Apple Developer Program membership. Note that a
-lapsed membership does not break releases already signed and notarised — they
-keep installing and running; membership is needed to sign and notarise new ones.
+Only the first eight workspaces can be switched to. Switching works by sending
+Vivaldi's own keyboard shortcut, and Vivaldi binds shortcuts to that many; the
+rest are listed but dimmed.
 
 ## Limitations
 
 - **Full-screen spaces.** A floating panel over another app's full-screen window
-  is unreliable on macOS, regardless of collection behaviour.
+  is unreliable on macOS, regardless of collection behaviour. The rail hides
+  itself there by default.
 - **Raising a window on another Space** switches you to that Space. That is how
   macOS works, not a bug.
 - **Not on the Mac App Store, and cannot be.** The App Sandbox blocks
   cross-process Accessibility calls and no entitlement lifts that, which is why
   window managers either predate the sandbox requirement or ship outside the
   Store.
+
+## Development
+
+- [Building and releasing](docs/BUILDING.md)
+- [How it works](docs/ARCHITECTURE.md)
 
 ## License
 

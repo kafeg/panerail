@@ -33,7 +33,12 @@ enum DeveloperCommands {
 
         if let bundleID = value(after: "--render-live"),
            let path = value(after: "--render-live", offset: 2) {
-            finish(PreviewRenderer.renderLive(bundleIdentifier: bundleID, to: path, dark: dark))
+            finish(PreviewRenderer.renderLive(
+                bundleIdentifier: bundleID,
+                to: path,
+                dark: dark,
+                iconStrip: arguments.contains("--strip")
+            ))
         }
 
         if let path = value(after: "--render-preview") {

@@ -59,7 +59,12 @@ enum PreviewRenderer {
     /// shows the app's own icon and genuine window titles rather than a mock-up.
     ///
     /// Needs the Accessibility grant, so it has to be launched through `open`.
-    static func renderLive(bundleIdentifier: String, to path: String, dark: Bool) -> Bool {
+    static func renderLive(
+        bundleIdentifier: String,
+        to path: String,
+        dark: Bool,
+        iconStrip: Bool = false
+    ) -> Bool {
         guard AccessibilityAuthorizer.isProcessTrusted else {
             print("no accessibility permission")
             return false
@@ -74,10 +79,11 @@ enum PreviewRenderer {
         let suite = UserDefaults(suiteName: "dev.kafeg.panerail.preview") ?? .standard
         suite.removePersistentDomain(forName: "dev.kafeg.panerail.preview")
         let preferences = Preferences(defaults: suite)
+        preferences.appSpecificProviders = true
 
         let coordinator = RailCoordinator(
             windowProvider: WindowRailProvider(source: AXWindowSource()),
-            appSpecificProviders: [VivaldiRailProvider()],
+            appSpecificProviders: [VivaldiRailProvider(prefersIconStrip: { iconStrip })],
             preferences: preferences
         )
         coordinator.setFrontmost(app)
@@ -93,7 +99,8 @@ enum PreviewRenderer {
                 onOpenSettings: {},
                 onSelect: { _ in }
             ),
-            size: RailGeometry.panelSize(
+            size: RailGeometry.size(
+                for: coordinator.layout,
                 itemCount: coordinator.items.count,
                 width: CGFloat(preferences.width)
             ),
