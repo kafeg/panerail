@@ -27,6 +27,37 @@ final class RailGeometryTests: XCTestCase {
         XCTAssertEqual(RailGeometry.visibleRowCount(for: 30, maxRows: 12), 12)
     }
 
+    // MARK: - Horizontal layout
+
+    func testTheStripGrowsSidewaysAndKeepsItsHeight() {
+        let three = RailGeometry.stripSize(itemCount: 3)
+        let six = RailGeometry.stripSize(itemCount: 6)
+        XCTAssertEqual(six.width - three.width, RailGeometry.stripItemSide * 3, accuracy: 0.001)
+        XCTAssertEqual(three.height, six.height)
+        XCTAssertEqual(three.height, RailGeometry.stripHeight)
+    }
+
+    func testTheStripLeavesRoomForTheGear() {
+        XCTAssertGreaterThanOrEqual(
+            RailGeometry.stripSize(itemCount: 0).width,
+            RailGeometry.stripTrailing
+        )
+    }
+
+    func testTheStripStopsGrowingAtItsCap() {
+        let capped = RailGeometry.stripSize(itemCount: 200)
+        let atCap = RailGeometry.stripSize(itemCount: RailGeometry.maxVisibleStripItems)
+        XCTAssertEqual(capped.width, atCap.width)
+    }
+
+    func testSizeFollowsTheLayout() {
+        let list = RailGeometry.size(for: .list, itemCount: 4, width: 255)
+        let strip = RailGeometry.size(for: .iconStrip, itemCount: 4, width: 255)
+        XCTAssertEqual(list, RailGeometry.panelSize(itemCount: 4, width: 255))
+        XCTAssertEqual(strip, RailGeometry.stripSize(itemCount: 4))
+        XCTAssertGreaterThan(strip.width, strip.height, "the strip is wider than it is tall")
+    }
+
     func testClampLeavesOnScreenOriginAlone() {
         let size = CGSize(width: 220, height: 200)
         let origin = CGPoint(x: 400, y: 300)

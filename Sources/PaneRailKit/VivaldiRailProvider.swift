@@ -29,6 +29,7 @@ public final class VivaldiRailProvider: RailItemProvider {
 
     private let sender: ShortcutSending
     private let activeReader: VivaldiActiveWorkspaceReading?
+    private let prefersIconStrip: () -> Bool
     private let preferencesURL: URL
     private var cached: [VivaldiWorkspace] = []
     private var cachedAt: Date?
@@ -36,11 +37,23 @@ public final class VivaldiRailProvider: RailItemProvider {
     public init(
         sender: ShortcutSending = CGEventShortcutSender(),
         activeReader: VivaldiActiveWorkspaceReading? = AXVivaldiActiveWorkspaceReader(),
-        preferencesURL: URL = VivaldiWorkspaces.preferencesURL()
+        preferencesURL: URL = VivaldiWorkspaces.preferencesURL(),
+        prefersIconStrip: @escaping () -> Bool = { false }
     ) {
         self.sender = sender
         self.activeReader = activeReader
         self.preferencesURL = preferencesURL
+        self.prefersIconStrip = prefersIconStrip
+    }
+
+    /// The strip is only offered when every workspace actually has a glyph;
+    /// otherwise it would be a row of anonymous placeholders.
+    public func layout(for app: FrontmostApp) -> RailLayout {
+        let list = workspaces()
+        guard prefersIconStrip(), !list.isEmpty, list.allSatisfy({ $0.icon?.isEmpty == false }) else {
+            return .list
+        }
+        return .iconStrip
     }
 
     /// The digit of the built-in shortcut for a workspace, or `nil` when it is
@@ -65,7 +78,8 @@ public final class VivaldiRailProvider: RailItemProvider {
                 isActive: workspace.index == active,
                 // Past the last bound shortcut there is nothing to send, so
                 // those rows are shown but visibly inert rather than dead.
-                isDimmed: Self.shortcutDigit(forWorkspaceAt: workspace.index) == nil
+                isDimmed: Self.shortcutDigit(forWorkspaceAt: workspace.index) == nil,
+                iconSVG: workspace.icon
             )
         }
     }

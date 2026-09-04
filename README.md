@@ -82,7 +82,7 @@ permission state is the first thing the window reports, and it updates live.
 | Appear from *n* windows | The rail stays hidden below this many windows. Set it to 1 to always show it |
 | Hide in full screen | Gets out of the way while a window fills the screen. On by default |
 | Width | 160–380 pt |
-| Position | Reset the rail back to the right edge |
+| Position | One position for everything, or one remembered per application. An app seen for the first time opens where the rail was last left |
 | Launch at login | Registers a login item via `SMAppService` |
 
 ## App-specific states (experimental)
@@ -100,9 +100,19 @@ window, so window switching does not help with them at all, and its own picker
 is a dropdown at the top of the window. The rail lists the workspaces, marks the
 active one and switches with a click.
 
-Two limits worth knowing: only the first eight workspaces can be switched to,
-because that is as far as Vivaldi's own keyboard shortcuts reach, and later ones
-are listed but dimmed. And a Vivaldi update may break this at any time.
+It can also show them as a row of glyphs instead of a list of names — Vivaldi
+stores each workspace's icon as inline SVG, so those are the real icons, and the
+name appears in a tooltip. Switch it on under Supported applications; the rail
+falls back to the list if any workspace has no icon.
+
+<div align="center">
+  <img src="docs/strip-light.png" width="230" alt="Vivaldi workspaces as a row of icons">
+</div>
+
+Two limits worth knowing. Only the first eight workspaces can be switched to:
+switching works by sending Vivaldi's own keyboard shortcut, and Vivaldi binds
+shortcuts to that many, so later ones are listed but dimmed. And a Vivaldi
+update may break this at any time.
 
 ## Building from source
 

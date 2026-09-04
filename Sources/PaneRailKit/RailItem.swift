@@ -11,13 +11,34 @@ public struct RailItem: Identifiable, Equatable {
     public let isActive: Bool
     /// Drawn muted — minimised windows, for instance.
     public let isDimmed: Bool
+    /// Inline SVG for a glyph to show instead of the row's plain marker, when
+    /// the provider has one. Carried as markup rather than an image so the item
+    /// stays a comparable value.
+    public let iconSVG: String?
 
-    public init(id: UInt64, title: String, isActive: Bool = false, isDimmed: Bool = false) {
+    public init(
+        id: UInt64,
+        title: String,
+        isActive: Bool = false,
+        isDimmed: Bool = false,
+        iconSVG: String? = nil
+    ) {
         self.id = id
         self.title = title
         self.isActive = isActive
         self.isDimmed = isDimmed
+        self.iconSVG = iconSVG
     }
+}
+
+/// How the rail arranges what a provider gives it.
+public enum RailLayout: String, Equatable, Codable {
+    /// A vertical list of titles — the default, and the only sensible shape
+    /// when rows are window titles.
+    case list
+    /// A horizontal row of glyphs, with the title in a tooltip. Only worth
+    /// offering when every row has an icon that identifies it on its own.
+    case iconStrip
 }
 
 /// Supplies the rail's rows for a given application and acts on a click.
@@ -34,4 +55,12 @@ public protocol RailItemProvider: AnyObject {
 
     @discardableResult
     func activate(_ item: RailItem, in app: FrontmostApp) -> Bool
+
+    /// How this provider's rows are best shown. Providers that have nothing to
+    /// say get the list.
+    func layout(for app: FrontmostApp) -> RailLayout
+}
+
+public extension RailItemProvider {
+    func layout(for app: FrontmostApp) -> RailLayout { .list }
 }

@@ -8,11 +8,15 @@ public struct VivaldiWorkspace: Identifiable, Equatable {
     /// Position in Vivaldi's list, which is also the number used by the
     /// built-in `Ctrl+Shift+<n>` shortcut. Zero-based here.
     public let index: Int
+    /// The workspace's glyph, stored by Vivaldi as inline SVG markup rather
+    /// than a reference into an icon set, so it can be drawn as-is.
+    public let icon: String?
 
-    public init(id: Double, name: String, index: Int) {
+    public init(id: Double, name: String, index: Int, icon: String? = nil) {
         self.id = id
         self.name = name
         self.index = index
+        self.icon = icon
     }
 }
 
@@ -59,7 +63,7 @@ public enum VivaldiWorkspaces {
                   !name.isEmpty
             else { return nil }
             let id = (item["id"] as? NSNumber)?.doubleValue ?? Double(index)
-            return VivaldiWorkspace(id: id, name: name, index: index)
+            return VivaldiWorkspace(id: id, name: name, index: index, icon: item["icon"] as? String)
         }
     }
 

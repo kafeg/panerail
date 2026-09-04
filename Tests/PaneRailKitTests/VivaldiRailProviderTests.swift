@@ -33,19 +33,45 @@ final class VivaldiRailProviderTests: XCTestCase {
         super.tearDown()
     }
 
-    private func write(names: [String]) {
+    private func write(names: [String], icons: Bool = false) {
+        let glyph = #"<svg viewBox=\"0 0 16 16\"><path d=\"M1 1L15 15\"/></svg>"#
         let entries = names.enumerated()
-            .map { #"{"id":\#($0.offset + 1),"name":"\#($0.element)"}"# }
+            .map { index, name in
+                let icon = icons ? #","icon":"\#(glyph)"# + "\"" : ""
+                return #"{"id":\#(index + 1),"name":"\#(name)"\#(icon)}"#
+            }
             .joined(separator: ",")
         try? Data(#"{"vivaldi":{"workspaces":{"list":[\#(entries)]}}}"#.utf8).write(to: fileURL)
     }
 
-    private func makeProvider(active: Int? = nil) -> VivaldiRailProvider {
+    private func makeProvider(active: Int? = nil, iconStrip: Bool = false) -> VivaldiRailProvider {
         VivaldiRailProvider(
             sender: sender,
             activeReader: FakeActiveReader(index: active),
-            preferencesURL: fileURL
+            preferencesURL: fileURL,
+            prefersIconStrip: { iconStrip }
         )
+    }
+
+    func testWorkspaceIconsAreCarriedThrough() {
+        write(names: ["Work", "Home"], icons: true)
+        XCTAssertTrue(makeProvider().items(for: vivaldi()).allSatisfy { $0.iconSVG != nil })
+    }
+
+    func testTheListIsTheDefaultLayout() {
+        write(names: ["Work", "Home"], icons: true)
+        XCTAssertEqual(makeProvider().layout(for: vivaldi()), .list)
+    }
+
+    func testTheStripIsOfferedWhenAskedForAndEveryWorkspaceHasAGlyph() {
+        write(names: ["Work", "Home"], icons: true)
+        XCTAssertEqual(makeProvider(iconStrip: true).layout(for: vivaldi()), .iconStrip)
+    }
+
+    /// A strip of anonymous placeholders would be worse than the list.
+    func testTheStripIsDeclinedWhenAGlyphIsMissing() {
+        write(names: ["Work", "Home"], icons: false)
+        XCTAssertEqual(makeProvider(iconStrip: true).layout(for: vivaldi()), .list)
     }
 
     private func vivaldi(pid: pid_t = 900) -> FrontmostApp {

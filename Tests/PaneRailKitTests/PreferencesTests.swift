@@ -115,7 +115,7 @@ final class PreferencesTests: XCTestCase {
     func testResetPositionClearsSavedOrigin() {
         let preferences = makePreferences()
         preferences.savedOrigin = CGPoint(x: 10, y: 20)
-        preferences.resetPosition()
+        preferences.resetPositions()
         XCTAssertNil(preferences.savedOrigin)
         XCTAssertNil(makePreferences().savedOrigin, "the reset must be persisted too")
     }
@@ -134,11 +134,83 @@ final class PreferencesTests: XCTestCase {
             .sink { _ in received += 1 }
             .store(in: &cancellables)
 
-        preferences.resetPosition()
+        preferences.resetPositions()
         XCTAssertEqual(received, 1)
 
         preferences.savedOrigin = CGPoint(x: 10, y: 20)
         XCTAssertEqual(received, 2, "storing a position must notify too")
+    }
+
+    // MARK: - Position modes
+
+    func testSharedModeGivesEveryAppTheSamePosition() {
+        let preferences = makePreferences()
+        preferences.setOrigin(CGPoint(x: 10, y: 20), for: "com.example.a")
+
+        XCTAssertEqual(preferences.origin(for: "com.example.a"), CGPoint(x: 10, y: 20))
+        XCTAssertEqual(preferences.origin(for: "com.example.b"), CGPoint(x: 10, y: 20))
+    }
+
+    func testPerAppModeKeepsPositionsApart() {
+        let preferences = makePreferences()
+        preferences.positionMode = .perApp
+        preferences.setOrigin(CGPoint(x: 10, y: 20), for: "com.example.a")
+        preferences.setOrigin(CGPoint(x: 90, y: 80), for: "com.example.b")
+
+        XCTAssertEqual(preferences.origin(for: "com.example.a"), CGPoint(x: 10, y: 20))
+        XCTAssertEqual(preferences.origin(for: "com.example.b"), CGPoint(x: 90, y: 80))
+    }
+
+    /// An app seen for the first time should appear where the rail was last
+    /// left, not jump back to the screen edge.
+    func testAnAppWithNoPositionInheritsTheLastOneUsed() {
+        let preferences = makePreferences()
+        preferences.positionMode = .perApp
+        preferences.setOrigin(CGPoint(x: 33, y: 44), for: "com.example.a")
+
+        XCTAssertEqual(preferences.origin(for: "com.example.newcomer"), CGPoint(x: 33, y: 44))
+    }
+
+    func testPerAppPositionsSurviveARestart() {
+        let first = makePreferences()
+        first.positionMode = .perApp
+        first.setOrigin(CGPoint(x: 12, y: 34), for: "com.example.a")
+
+        let second = makePreferences()
+        XCTAssertEqual(second.positionMode, .perApp)
+        XCTAssertEqual(second.origin(for: "com.example.a"), CGPoint(x: 12, y: 34))
+    }
+
+    /// Switching back to one shared position must not lose what each app
+    /// remembered, in case the user changes their mind.
+    func testPerAppPositionsAreKeptWhileInSharedMode() {
+        let preferences = makePreferences()
+        preferences.positionMode = .perApp
+        preferences.setOrigin(CGPoint(x: 12, y: 34), for: "com.example.a")
+        preferences.setOrigin(CGPoint(x: 56, y: 78), for: "com.example.b")
+
+        preferences.positionMode = .shared
+        XCTAssertEqual(preferences.origin(for: "com.example.a"), CGPoint(x: 56, y: 78))
+
+        preferences.positionMode = .perApp
+        XCTAssertEqual(preferences.origin(for: "com.example.a"), CGPoint(x: 12, y: 34))
+    }
+
+    func testResettingForgetsEveryPosition() {
+        let preferences = makePreferences()
+        preferences.positionMode = .perApp
+        preferences.setOrigin(CGPoint(x: 12, y: 34), for: "com.example.a")
+
+        preferences.resetPositions()
+        XCTAssertNil(preferences.origin(for: "com.example.a"))
+        XCTAssertNil(preferences.savedOrigin)
+        XCTAssertNil(makePreferences().origin(for: "com.example.a"), "the reset is persisted")
+    }
+
+    func testPositionDefaults() {
+        let preferences = makePreferences()
+        XCTAssertEqual(preferences.positionMode, .shared)
+        XCTAssertFalse(preferences.vivaldiIconStrip)
     }
 
     /// A half-written position (one axis only) is meaningless and must not be

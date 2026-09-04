@@ -32,7 +32,7 @@ struct AdvancedSettingsView: View {
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text("Supported applications")
                     .font(.headline)
 
@@ -40,20 +40,41 @@ struct AdvancedSettingsView: View {
                     Image(systemName: "square.grid.3x3.topleft.filled")
                         .foregroundStyle(Color.accentColor)
                         .frame(width: 16)
-                    VStack(alignment: .leading, spacing: 2) {
+
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("Vivaldi — workspaces")
                         Text("""
                         Workspaces live inside a single window, so window \
-                        switching does not reach them. Only the first \
-                        \(VivaldiRailProvider.switchableCount) can be switched \
-                        to, the limit of Vivaldi's own shortcuts; the rest are \
-                        listed but dimmed.
+                        switching does not reach them.
+                        """)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Toggle("Show as a row of icons", isOn: $preferences.vivaldiIconStrip)
+                        Text("""
+                        Each workspace becomes its own glyph, with the name in \
+                        a tooltip. Falls back to the list when a workspace has \
+                        no icon.
+                        """)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("""
+                        Only the first \(VivaldiRailProvider.switchableCount) \
+                        workspaces can be switched to. Switching works by \
+                        sending Vivaldi's own keyboard shortcut, and Vivaldi \
+                        binds shortcuts to that many; the rest are listed but \
+                        dimmed.
                         """)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                .disabled(!preferences.appSpecificProviders)
+                .opacity(preferences.appSpecificProviders ? 1 : 0.5)
             }
 
             Spacer(minLength: 0)

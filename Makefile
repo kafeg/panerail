@@ -56,6 +56,8 @@ demo: build
 preview: build
 	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-settings docs/settings-light.png
 	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-settings docs/settings-dark.png --dark
+	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-strip docs/strip-light.png
+	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-strip docs/strip-dark.png --dark
 	@rm -f default.profraw
 
 preview-rail: install

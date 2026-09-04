@@ -140,11 +140,20 @@ struct GeneralSettingsView: View {
 
                 GridRow {
                     label("Position")
-                    VStack(alignment: .leading, spacing: 2) {
-                        Button("Reset to right edge") { preferences.resetPosition() }
-                        Text("Drag the rail by its header to move it.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Picker("", selection: $preferences.positionMode) {
+                            Text("The same everywhere").tag(RailPositionMode.shared)
+                            Text("Remembered per application").tag(RailPositionMode.perApp)
+                        }
+                        .labelsHidden()
+                        .frame(width: 230, alignment: .leading)
+
+                        HStack(spacing: 8) {
+                            Button("Reset") { preferences.resetPositions() }
+                            Text("Drag the rail by its header to move it.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
 

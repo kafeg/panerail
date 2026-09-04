@@ -12,6 +12,7 @@ public final class RailCoordinator: ObservableObject {
     @Published public private(set) var app: FrontmostApp?
     @Published public private(set) var items: [RailItem] = []
     @Published public private(set) var isVisible = false
+    @Published public private(set) var layout: RailLayout = .list
 
     public let preferences: Preferences
 
@@ -72,6 +73,7 @@ public final class RailCoordinator: ObservableObject {
         guard let app, preferences.isEnabled else {
             if !items.isEmpty { items = [] }
             if isVisible { isVisible = false }
+            if layout != .list { layout = .list }
             activeProvider = nil
             return
         }
@@ -97,6 +99,7 @@ public final class RailCoordinator: ObservableObject {
         guard RailVisibility.isEligible(input) else {
             if !items.isEmpty { items = [] }
             if isVisible { isVisible = false }
+            if layout != .list { layout = .list }
             activeProvider = nil
             return
         }
@@ -106,6 +109,9 @@ public final class RailCoordinator: ObservableObject {
 
         let newItems = provider.items(for: app)
         if newItems != items { items = newItems }
+
+        let newLayout = provider.layout(for: app)
+        if newLayout != layout { layout = newLayout }
 
         let visible = newItems.count >= max(1, preferences.minimumWindows)
         if visible != isVisible { isVisible = visible }

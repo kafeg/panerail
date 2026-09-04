@@ -40,6 +40,10 @@ enum DeveloperCommands {
             finish(PreviewRenderer.render(to: path, dark: dark))
         }
 
+        if let path = value(after: "--render-strip") {
+            finish(PreviewRenderer.renderStrip(to: path, dark: dark))
+        }
+
         if let path = value(after: "--render-settings") {
             finish(PreviewRenderer.renderSettings(
                 to: path, dark: dark, advanced: arguments.contains("--advanced")

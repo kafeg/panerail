@@ -102,6 +102,32 @@ enum PreviewRenderer {
         )
     }
 
+    /// Renders the horizontal layout, which no other preview can reach: it is
+    /// chosen by a provider, not by a setting the renderer could flip.
+    static func renderStrip(to path: String, dark: Bool) -> Bool {
+        let suite = UserDefaults(suiteName: "dev.kafeg.panerail.preview") ?? .standard
+        suite.removePersistentDomain(forName: "dev.kafeg.panerail.preview")
+        let preferences = Preferences(defaults: suite)
+
+        let coordinator = RailCoordinator(
+            windowProvider: StripPreviewProvider(),
+            preferences: preferences
+        )
+        coordinator.setFrontmost(DemoData.app)
+
+        return draw(
+            rail: RailView(
+                coordinator: coordinator,
+                preferences: preferences,
+                onOpenSettings: {},
+                onSelect: { _ in }
+            ),
+            size: RailGeometry.stripSize(itemCount: coordinator.items.count),
+            dark: dark,
+            to: path
+        )
+    }
+
     /// Renders one settings tab's content, so its layout can be checked without
     /// a Screen Recording grant to capture the real window.
     static func renderSettings(to path: String, dark: Bool, advanced: Bool = false) -> Bool {
@@ -143,6 +169,35 @@ enum PreviewRenderer {
             NSColor.windowBackgroundColor.setFill()
             bounds.fill()
         }
+    }
+
+    /// Scripted glyphs shaped like Vivaldi's: 16-point outlines that inherit
+    /// their colour.
+    private final class StripPreviewProvider: RailItemProvider {
+        private static let shapes = [
+            ("Work", "M8 0.74L9.73 6.27H15.5L10.92 9.71L12.72 15.26L8 11.83L3.28 15.26L5.08 9.71L0.5 6.27H6.27L8 0.74Z"),
+            ("Personal", "M3 3H13V13H3V3Z"),
+            ("Reading", "M8 1L15 8L8 15L1 8L8 1Z"),
+            ("Media", "M2 8H14M8 2V14"),
+            ("Archive", "M3 3H13V7H3V3ZM3 9H13V13H3V9Z"),
+        ]
+
+        func supports(_ app: FrontmostApp) -> Bool { true }
+
+        func items(for app: FrontmostApp) -> [RailItem] {
+            Self.shapes.enumerated().map { index, shape in
+                RailItem(
+                    id: UInt64(index),
+                    title: shape.0,
+                    isActive: index == 1,
+                    iconSVG: #"<svg viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="\#(shape.1)"/></svg>"#
+                )
+            }
+        }
+
+        func activate(_ item: RailItem, in app: FrontmostApp) -> Bool { true }
+
+        func layout(for app: FrontmostApp) -> RailLayout { .iconStrip }
     }
 
     private final class BackdropView: NSView {

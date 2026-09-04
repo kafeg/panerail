@@ -13,12 +13,18 @@ struct RailView: View {
     private let cornerRadius: CGFloat = 10
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider().opacity(0.4)
-            windowList
+        Group {
+            if coordinator.layout == .iconStrip {
+                iconStrip
+            } else {
+                VStack(spacing: 0) {
+                    header
+                    Divider().opacity(0.4)
+                    windowList
+                }
+                .frame(width: preferences.width)
+            }
         }
-        .frame(width: preferences.width)
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
@@ -60,6 +66,57 @@ struct RailView: View {
         .background(WindowDragHandle())
     }
 
+    /// The horizontal layout: glyphs only, with the name in a tooltip. The
+    /// strip itself is the drag handle, since there is no header to grab.
+    private var iconStrip: some View {
+        HStack(spacing: 0) {
+            ForEach(coordinator.items) { item in
+                stripCell(for: item)
+            }
+
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 9))
+                .foregroundStyle(Color.secondary)
+                .opacity(isHoveringSettings ? 1 : 0.6)
+                .frame(width: RailGeometry.stripTrailing, height: RailGeometry.stripHeight)
+                .contentShape(Rectangle())
+                .onHover { isHoveringSettings = $0 }
+                .onTapGesture(perform: onOpenSettings)
+                .help("PaneRail settings")
+        }
+        .padding(.horizontal, RailGeometry.stripPadding)
+        .frame(height: RailGeometry.stripHeight)
+        .background(WindowDragHandle())
+    }
+
+    private func stripCell(for item: RailItem) -> some View {
+        let isHovered = hoveredID == item.id
+
+        return marker(for: item, side: 15)
+            .frame(width: RailGeometry.stripItemSide, height: RailGeometry.stripHeight)
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(isHovered ? Color.primary.opacity(0.12) : Color.clear)
+                    .padding(2)
+            )
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                if hovering {
+                    hoveredID = item.id
+                } else if hoveredID == item.id {
+                    hoveredID = nil
+                }
+            }
+            .onTapGesture { onSelect(item) }
+            .help(item.title)
+    }
+
+    /// One column width for every row, so titles line up whether the provider
+    /// supplies glyphs or only the plain marker.
+    private var markerWidth: CGFloat {
+        coordinator.items.contains { $0.iconSVG != nil } ? 14 : 5
+    }
+
     private var windowList: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 0) {
@@ -72,13 +129,38 @@ struct RailView: View {
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
+    @ViewBuilder
+    private func marker(for item: RailItem, side: CGFloat = 13) -> some View {
+        if let svg = item.iconSVG, let icon = SVGIconRenderer.shared.image(svg: svg, side: side) {
+            Image(nsImage: icon)
+                .renderingMode(.template)
+                .foregroundStyle(item.isActive ? Color.accentColor : Color.secondary)
+        } else {
+            // A row with no glyph still has to be identifiable in the strip,
+            // so it falls back to the first letter of its name.
+            Text(item.title.prefix(1).uppercased())
+                .font(.system(size: side * 0.72, weight: .medium))
+                .foregroundStyle(item.isActive ? Color.accentColor : Color.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func listMarker(for item: RailItem) -> some View {
+        if item.iconSVG != nil {
+            marker(for: item)
+        } else {
+            Circle()
+                .fill(item.isActive ? Color.accentColor : Color.secondary.opacity(0.4))
+                .frame(width: 5, height: 5)
+        }
+    }
+
     private func row(for item: RailItem) -> some View {
         let isHovered = hoveredID == item.id
 
         return HStack(spacing: 7) {
-            Circle()
-                .fill(item.isActive ? Color.accentColor : Color.secondary.opacity(0.4))
-                .frame(width: 5, height: 5)
+            listMarker(for: item)
+                .frame(width: markerWidth, height: 14)
 
             Text(item.title)
                 .font(.system(size: 11.5))

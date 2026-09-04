@@ -2,6 +2,16 @@ import Combine
 import CoreGraphics
 import Foundation
 
+/// Whether the rail keeps one position or one per application.
+public enum RailPositionMode: String, CaseIterable, Identifiable, Codable {
+    /// One position, wherever the rail was last dropped.
+    case shared
+    /// Each application remembers where its rail was left.
+    case perApp
+
+    public var id: String { rawValue }
+}
+
 /// Which apps the rail is allowed to appear for.
 public enum RailMode: String, CaseIterable, Identifiable, Codable {
     /// Any app that satisfies the window-count threshold.
@@ -24,6 +34,9 @@ public final class Preferences: ObservableObject {
         static let listedBundleIDs = "rail.listedBundleIDs"
         static let appSpecificProviders = "rail.appSpecificProviders"
         static let hidesInFullScreen = "rail.hidesInFullScreen"
+        static let positionMode = "rail.positionMode"
+        static let originsByApp = "rail.originsByApp"
+        static let vivaldiIconStrip = "rail.vivaldi.iconStrip"
         static let width = "rail.width"
         static let originX = "rail.originX"
         static let originY = "rail.originY"
@@ -73,6 +86,18 @@ public final class Preferences: ObservableObject {
         didSet { defaults.set(hidesInFullScreen, forKey: Key.hidesInFullScreen) }
     }
 
+    @Published public var positionMode: RailPositionMode {
+        didSet {
+            defaults.set(positionMode.rawValue, forKey: Key.positionMode)
+            positionRevision &+= 1
+        }
+    }
+
+    /// Vivaldi's rail as a row of workspace glyphs instead of a list of names.
+    @Published public var vivaldiIconStrip: Bool {
+        didSet { defaults.set(vivaldiIconStrip, forKey: Key.vivaldiIconStrip) }
+    }
+
     /// Whether apps that keep their own internal states — Vivaldi's workspaces,
     /// for instance — show those instead of their windows.
     ///
@@ -119,6 +144,9 @@ public final class Preferences: ObservableObject {
         listedBundleIDs = defaults.stringArray(forKey: Key.listedBundleIDs) ?? []
         appSpecificProviders = defaults.object(forKey: Key.appSpecificProviders) as? Bool ?? false
         hidesInFullScreen = defaults.object(forKey: Key.hidesInFullScreen) as? Bool ?? true
+        positionMode = (defaults.string(forKey: Key.positionMode)
+            .flatMap(RailPositionMode.init(rawValue:))) ?? .shared
+        vivaldiIconStrip = defaults.object(forKey: Key.vivaldiIconStrip) as? Bool ?? false
         storedWidth = min(
             max(defaults.object(forKey: Key.width) as? Double ?? Self.defaultWidth, Self.minimumWidth),
             Self.maximumWidth
@@ -148,26 +176,77 @@ public final class Preferences: ObservableObject {
 
     /// `nil` until the user drags the rail somewhere, which is the signal to
     /// fall back to the default placement.
+    ///
+    /// This is also the "last used" position: in per-application mode an app
+    /// with no position of its own opens where the rail was most recently left,
+    /// which is far less surprising than having it jump back to the edge.
     public var savedOrigin: CGPoint? {
-        get {
-            guard let x = defaults.object(forKey: Key.originX) as? Double,
-                  let y = defaults.object(forKey: Key.originY) as? Double
-            else { return nil }
-            return CGPoint(x: x, y: y)
-        }
+        get { point(forKey: Key.originX, Key.originY) }
         set {
             defer { positionRevision &+= 1 }
-            guard let newValue else {
-                defaults.removeObject(forKey: Key.originX)
-                defaults.removeObject(forKey: Key.originY)
-                return
-            }
-            defaults.set(Double(newValue.x), forKey: Key.originX)
-            defaults.set(Double(newValue.y), forKey: Key.originY)
+            setPoint(newValue, forKey: Key.originX, Key.originY)
         }
     }
 
-    public func resetPosition() {
+    /// Where the rail should open for the given application.
+    public func origin(for bundleIdentifier: String?) -> CGPoint? {
+        switch positionMode {
+        case .shared:
+            return savedOrigin
+        case .perApp:
+            guard let bundleIdentifier, let stored = originsByApp[bundleIdentifier] else {
+                return savedOrigin
+            }
+            return stored
+        }
+    }
+
+    /// Records where the user dropped the rail.
+    ///
+    /// The shared position is updated in both modes, so it always means "the
+    /// last place the user chose" and can serve as the fallback for an app that
+    /// has no position yet.
+    public func setOrigin(_ origin: CGPoint, for bundleIdentifier: String?) {
+        if positionMode == .perApp, let bundleIdentifier {
+            var origins = originsByApp
+            origins[bundleIdentifier] = origin
+            writeOriginsByApp(origins)
+        }
+        savedOrigin = origin
+    }
+
+    /// Forgets every stored position, so the rail returns to its default place.
+    public func resetPositions() {
+        writeOriginsByApp([:])
         savedOrigin = nil
+    }
+
+    private var originsByApp: [String: CGPoint] {
+        let raw = defaults.dictionary(forKey: Key.originsByApp) as? [String: [Double]] ?? [:]
+        return raw.compactMapValues { pair in
+            pair.count == 2 ? CGPoint(x: pair[0], y: pair[1]) : nil
+        }
+    }
+
+    private func writeOriginsByApp(_ origins: [String: CGPoint]) {
+        let raw = origins.mapValues { [Double($0.x), Double($0.y)] }
+        defaults.set(raw, forKey: Key.originsByApp)
+    }
+
+    private func point(forKey xKey: String, _ yKey: String) -> CGPoint? {
+        guard let x = defaults.object(forKey: xKey) as? Double,
+              let y = defaults.object(forKey: yKey) as? Double
+        else { return nil }
+        return CGPoint(x: x, y: y)
+    }
+
+    private func setPoint(_ point: CGPoint?, forKey xKey: String, _ yKey: String) {
+        guard let point else {
+            defaults.removeObject(forKey: xKey)
+            defaults.removeObject(forKey: yKey)
+            return
+        }
+        defaults.set(Double(point.x), forKey: xKey)
+        defaults.set(Double(point.y), forKey: yKey)
     }
 }

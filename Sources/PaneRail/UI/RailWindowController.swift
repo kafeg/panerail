@@ -33,23 +33,25 @@ final class RailWindowController {
         )
         panel.contentView = FirstMouseHostingView(rootView: rootView)
 
-        // `@Published` fires before the property is updated, so the emitted
-        // values are used rather than reading the coordinator back.
-        Publishers.CombineLatest4(
-            coordinator.$items,
-            coordinator.$isVisible,
-            preferences.widthPublisher,
-            preferences.positionPublisher
-        )
-        .receive(on: RunLoop.main)
-        .sink { [weak self] items, isVisible, width, _ in
-            self?.apply(itemCount: items.count, isVisible: isVisible, width: width)
-        }
-        .store(in: &cancellables)
+        // Several things move or resize the panel, and by the time these are
+        // delivered on the run loop the properties behind them have settled —
+        // so the handler reads current state instead of juggling combinators.
+        let triggers: [AnyPublisher<Void, Never>] = [
+            coordinator.$items.map { _ in () }.eraseToAnyPublisher(),
+            coordinator.$isVisible.map { _ in () }.eraseToAnyPublisher(),
+            coordinator.$layout.map { _ in () }.eraseToAnyPublisher(),
+            // The front app matters: in per-application mode each one has its
+            // own remembered position.
+            coordinator.$app.map { _ in () }.eraseToAnyPublisher(),
+            preferences.widthPublisher.map { _ in () }.eraseToAnyPublisher(),
+            preferences.positionPublisher.map { _ in () }.eraseToAnyPublisher(),
+        ]
 
-        // `queue: nil` keeps delivery synchronous. With a queue the block would
-        // run after `apply` has already cleared `isAdjustingFrame`, and the
-        // default placement would be persisted as if the user had chosen it.
+        Publishers.MergeMany(triggers)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] in self?.apply() }
+            .store(in: &cancellables)
+
         moveObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didMoveNotification,
             object: panel,
@@ -65,13 +67,19 @@ final class RailWindowController {
         }
     }
 
-    private func apply(itemCount: Int, isVisible: Bool, width: Double) {
-        let size = RailGeometry.panelSize(itemCount: itemCount, width: CGFloat(width))
+    private func apply() {
+        let itemCount = coordinator.items.count
+        let size = RailGeometry.size(
+            for: coordinator.layout,
+            itemCount: itemCount,
+            width: CGFloat(preferences.width)
+        )
+
         isAdjustingFrame = true
         panel.setFrame(targetFrame(for: size), display: true)
         isAdjustingFrame = false
 
-        setVisible(isVisible && itemCount > 0)
+        setVisible(coordinator.isVisible && itemCount > 0)
     }
 
     private func setVisible(_ visible: Bool) {
@@ -100,7 +108,7 @@ final class RailWindowController {
     /// The saved anchor is the panel's top-left corner, so the rail grows
     /// downwards as windows appear instead of drifting off the top of the screen.
     private func targetFrame(for size: CGSize) -> CGRect {
-        let anchor = preferences.savedOrigin
+        let anchor = preferences.origin(for: coordinator.app?.bundleIdentifier)
         let screen = anchor.flatMap { point in
             NSScreen.screens.first { $0.frame.contains(point) }
         } ?? NSScreen.main ?? NSScreen.screens.first
@@ -127,8 +135,9 @@ final class RailWindowController {
         savePositionWork?.cancel()
 
         let frame = panel.frame
+        let bundleID = coordinator.app?.bundleIdentifier
         let work = DispatchWorkItem { [weak self] in
-            self?.preferences.savedOrigin = CGPoint(x: frame.minX, y: frame.maxY)
+            self?.preferences.setOrigin(CGPoint(x: frame.minX, y: frame.maxY), for: bundleID)
         }
         savePositionWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.positionSaveDelay, execute: work)

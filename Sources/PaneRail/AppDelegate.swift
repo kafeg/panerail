@@ -33,7 +33,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             windowProvider: WindowRailProvider(source: source),
             // Apps that keep their own internal states get first refusal on
             // describing themselves; the window provider is the fallback.
-            appSpecificProviders: demo ? [] : [VivaldiRailProvider()],
+            appSpecificProviders: demo ? [] : [
+                VivaldiRailProvider(prefersIconStrip: { [preferences] in preferences.vivaldiIconStrip }),
+            ],
             preferences: preferences,
             isTrusted: { demo || AccessibilityAuthorizer.isProcessTrusted },
             fullScreenDetector: demo ? nil : AXFullScreenDetector()
