@@ -14,13 +14,13 @@ enum VivaldiProbe {
 
     /// The title of the menu item that owns this menu — Vivaldi's own string.
     private static func ownerLabel(of item: AXUIElement) -> String {
-        guard let menu = copy(item, kAXParentAttribute),
+        guard let menu = AXAttribute.value(item, kAXParentAttribute),
               CFGetTypeID(menu) == AXUIElementGetTypeID() else { return "?" }
-        guard let owner = copy((menu as! AXUIElement), kAXParentAttribute),
+        guard let owner = AXAttribute.value((menu as! AXUIElement), kAXParentAttribute),
               CFGetTypeID(owner) == AXUIElementGetTypeID() else { return "?" }
         let ownerElement = (owner as! AXUIElement)
-        let title = string(ownerElement, kAXTitleAttribute) ?? ""
-        let role = string(ownerElement, kAXRoleAttribute) ?? "?"
+        let title = AXAttribute.string(ownerElement, kAXTitleAttribute) ?? ""
+        let role = AXAttribute.string(ownerElement, kAXRoleAttribute) ?? "?"
         return title.isEmpty ? role : title
     }
 
@@ -52,17 +52,17 @@ enum VivaldiProbe {
         func walk(_ node: AXUIElement, depth: Int) {
             guard depth <= maxDepth, visited < maxNodes else { return }
             visited += 1
-            let role = string(node, kAXRoleAttribute) ?? "?"
+            let role = AXAttribute.string(node, kAXRoleAttribute) ?? "?"
             for attribute in [kAXTitleAttribute, kAXValueAttribute, kAXDescriptionAttribute, "AXHelp"] {
-                guard let text = string(node, attribute)?
+                guard let text = AXAttribute.string(node, attribute)?
                     .trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { continue }
                 if let hit = workspaces.first(where: { $0.name == text }) {
-                    found.append((role, string(node, kAXSubroleAttribute) ?? "",
+                    found.append((role, AXAttribute.string(node, kAXSubroleAttribute) ?? "",
                                   attribute, hit.index, depth, ownerLabel(of: node)))
                     break
                 }
             }
-            guard let children = copy(node, kAXChildrenAttribute) as? [AXUIElement] else { return }
+            guard let children = AXAttribute.value(node, kAXChildrenAttribute) as? [AXUIElement] else { return }
             for child in children { walk(child, depth: depth + 1) }
         }
         walk(element, depth: 0)
@@ -74,17 +74,5 @@ enum VivaldiProbe {
             emit("  workspace#\(hit.index) role=\(hit.role) subrole=\(hit.subrole) via=\(hit.attribute) depth=\(hit.depth) owner=\(hit.owner)")
         }
         emit("matches outside menus: \(nonMenu)")
-    }
-
-    private static func copy(_ element: AXUIElement, _ attribute: String) -> CFTypeRef? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else {
-            return nil
-        }
-        return value
-    }
-
-    private static func string(_ element: AXUIElement, _ attribute: String) -> String? {
-        copy(element, attribute) as? String
     }
 }

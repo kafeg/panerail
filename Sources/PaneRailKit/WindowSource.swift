@@ -26,7 +26,7 @@ public final class AXWindowSource: WindowSource {
             return []
         }
 
-        let focusedElement = Self.copyElement(app, kAXFocusedWindowAttribute)
+        let focusedElement = AXAttribute.element(app, kAXFocusedWindowAttribute)
 
         return elements.compactMap { element in
             guard Self.isStandardWindow(element) else { return nil }
@@ -72,15 +72,6 @@ public final class AXWindowSource: WindowSource {
             return true
         }
         return subrole == kAXStandardWindowSubrole
-    }
-
-    /// `as?` is unreliable across the CF/AX boundary, so the type is checked
-    /// explicitly before downcasting.
-    private static func copyElement(_ element: AXUIElement, _ attribute: String) -> AXUIElement? {
-        guard let value = copyAttribute(element, attribute),
-              CFGetTypeID(value) == AXUIElementGetTypeID()
-        else { return nil }
-        return (value as! AXUIElement)
     }
 
     private static func copyAttribute(_ element: AXUIElement, _ attribute: String) -> CFTypeRef? {

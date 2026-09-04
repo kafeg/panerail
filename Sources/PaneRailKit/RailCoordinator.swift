@@ -70,13 +70,7 @@ public final class RailCoordinator: ObservableObject {
 
     public func refresh() {
         // No point paying for the lookup when the answer cannot be "show".
-        guard let app, preferences.isEnabled else {
-            if !items.isEmpty { items = [] }
-            if isVisible { isVisible = false }
-            if layout != .list { layout = .list }
-            activeProvider = nil
-            return
-        }
+        guard let app, preferences.isEnabled else { return clear() }
 
         // Only asked when the setting is on, so the check costs nothing to
         // anyone who has turned it off.
@@ -89,20 +83,13 @@ public final class RailCoordinator: ObservableObject {
             isEnabled: preferences.isEnabled,
             isAccessibilityTrusted: isTrusted(),
             bundleIdentifier: app.bundleIdentifier,
-            itemCount: 0,
             mode: preferences.mode,
             minimumItems: preferences.minimumWindows,
             listedBundleIDs: Set(preferences.listedBundleIDs),
             isFullScreen: isFullScreen,
             hidesInFullScreen: preferences.hidesInFullScreen
         )
-        guard RailVisibility.isEligible(input) else {
-            if !items.isEmpty { items = [] }
-            if isVisible { isVisible = false }
-            if layout != .list { layout = .list }
-            activeProvider = nil
-            return
-        }
+        guard RailVisibility.isEligible(input) else { return clear() }
 
         let provider = provider(for: app)
         activeProvider = provider
@@ -113,8 +100,18 @@ public final class RailCoordinator: ObservableObject {
         let newLayout = provider.layout(for: app)
         if newLayout != layout { layout = newLayout }
 
-        let visible = newItems.count >= max(1, preferences.minimumWindows)
+        let visible = RailVisibility.meetsThreshold(
+            itemCount: newItems.count,
+            minimumItems: preferences.minimumWindows
+        )
         if visible != isVisible { isVisible = visible }
+    }
+
+    private func clear() {
+        if !items.isEmpty { items = [] }
+        if isVisible { isVisible = false }
+        if layout != .list { layout = .list }
+        activeProvider = nil
     }
 
     /// Acts on a row. Returns whether the provider reported success.

@@ -1,12 +1,12 @@
 import Foundation
 
-/// Everything the show/hide decision depends on, gathered into one value so the
-/// rule itself stays a pure function.
+/// Everything the show/hide decision depends on except how many rows there
+/// are, which arrives separately because it is only known after a provider has
+/// been asked — and asking is exactly what this lets a caller skip.
 public struct RailVisibilityInput {
     public let isEnabled: Bool
     public let isAccessibilityTrusted: Bool
     public let bundleIdentifier: String?
-    public let itemCount: Int
     public let mode: RailMode
     public let minimumItems: Int
     public let listedBundleIDs: Set<String>
@@ -18,7 +18,6 @@ public struct RailVisibilityInput {
         isEnabled: Bool = true,
         isAccessibilityTrusted: Bool = true,
         bundleIdentifier: String?,
-        itemCount: Int,
         mode: RailMode = .allApps,
         minimumItems: Int = 2,
         listedBundleIDs: Set<String> = [],
@@ -29,7 +28,6 @@ public struct RailVisibilityInput {
         self.isEnabled = isEnabled
         self.isAccessibilityTrusted = isAccessibilityTrusted
         self.bundleIdentifier = bundleIdentifier
-        self.itemCount = itemCount
         self.mode = mode
         self.minimumItems = minimumItems
         self.listedBundleIDs = listedBundleIDs
@@ -49,9 +47,14 @@ public enum RailVisibility {
         "com.apple.WindowManager",
     ]
 
-    public static func shouldShow(_ input: RailVisibilityInput) -> Bool {
-        guard isEligible(input) else { return false }
-        return input.itemCount >= max(1, input.minimumItems)
+    public static func shouldShow(_ input: RailVisibilityInput, itemCount: Int) -> Bool {
+        isEligible(input) && meetsThreshold(itemCount: itemCount, minimumItems: input.minimumItems)
+    }
+
+    /// The second half of the rule: enough rows to be worth showing. A stored
+    /// threshold below one must not be read as "show an app with no rows".
+    public static func meetsThreshold(itemCount: Int, minimumItems: Int) -> Bool {
+        itemCount >= max(1, minimumItems)
     }
 
     /// Everything the decision depends on except how many rows there are.

@@ -44,13 +44,13 @@ public final class AXVivaldiActiveWorkspaceReader: VivaldiActiveWorkspaceReading
     /// means the menu is not in a state we can read, and no row is highlighted
     /// rather than the wrong one.
     private func missingWorkspace(among workspaces: [VivaldiWorkspace], in menu: AXUIElement?) -> Int? {
-        guard let menu, let children = Self.copy(menu, kAXChildrenAttribute) as? [AXUIElement] else {
+        guard let menu, let children = AXAttribute.value(menu, kAXChildrenAttribute) as? [AXUIElement] else {
             return nil
         }
 
         var present = Set<Int>()
         for child in children {
-            guard let title = Self.string(child, kAXTitleAttribute) else { continue }
+            guard let title = AXAttribute.string(child, kAXTitleAttribute) else { continue }
             if let hit = workspaces.first(where: { $0.name == title }) { present.insert(hit.index) }
         }
         guard present.count >= Self.confidenceThreshold else { return nil }
@@ -64,16 +64,16 @@ public final class AXVivaldiActiveWorkspaceReader: VivaldiActiveWorkspaceReading
     /// menu is identified by its contents rather than by its name.
     private func locateWorkspaceMenu(pid: pid_t, workspaces: [VivaldiWorkspace]) -> AXUIElement? {
         let app = AXUIElementCreateApplication(pid)
-        guard let menuBar = Self.copyElement(app, "AXMenuBar"),
-              let barItems = Self.copy(menuBar, kAXChildrenAttribute) as? [AXUIElement]
+        guard let menuBar = AXAttribute.element(app, "AXMenuBar"),
+              let barItems = AXAttribute.value(menuBar, kAXChildrenAttribute) as? [AXUIElement]
         else { return nil }
 
         for barItem in barItems {
-            guard let menus = Self.copy(barItem, kAXChildrenAttribute) as? [AXUIElement] else { continue }
+            guard let menus = AXAttribute.value(barItem, kAXChildrenAttribute) as? [AXUIElement] else { continue }
             for menu in menus {
-                guard let items = Self.copy(menu, kAXChildrenAttribute) as? [AXUIElement] else { continue }
+                guard let items = AXAttribute.value(menu, kAXChildrenAttribute) as? [AXUIElement] else { continue }
                 for item in items {
-                    guard let submenus = Self.copy(item, kAXChildrenAttribute) as? [AXUIElement] else { continue }
+                    guard let submenus = AXAttribute.value(item, kAXChildrenAttribute) as? [AXUIElement] else { continue }
                     for submenu in submenus where matchCount(in: submenu, workspaces: workspaces) >= Self.confidenceThreshold {
                         return submenu
                     }
@@ -84,28 +84,10 @@ public final class AXVivaldiActiveWorkspaceReader: VivaldiActiveWorkspaceReading
     }
 
     private func matchCount(in menu: AXUIElement, workspaces: [VivaldiWorkspace]) -> Int {
-        guard let children = Self.copy(menu, kAXChildrenAttribute) as? [AXUIElement] else { return 0 }
+        guard let children = AXAttribute.value(menu, kAXChildrenAttribute) as? [AXUIElement] else { return 0 }
         return children.reduce(into: 0) { total, child in
-            guard let title = Self.string(child, kAXTitleAttribute) else { return }
+            guard let title = AXAttribute.string(child, kAXTitleAttribute) else { return }
             if workspaces.contains(where: { $0.name == title }) { total += 1 }
         }
-    }
-
-    private static func copy(_ element: AXUIElement, _ attribute: String) -> CFTypeRef? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else {
-            return nil
-        }
-        return value
-    }
-
-    private static func copyElement(_ element: AXUIElement, _ attribute: String) -> AXUIElement? {
-        guard let value = copy(element, attribute),
-              CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
-        return (value as! AXUIElement)
-    }
-
-    private static func string(_ element: AXUIElement, _ attribute: String) -> String? {
-        copy(element, attribute) as? String
     }
 }
