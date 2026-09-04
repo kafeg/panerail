@@ -37,10 +37,12 @@ final class RailGeometryTests: XCTestCase {
         XCTAssertEqual(three.height, RailGeometry.stripHeight)
     }
 
-    func testTheStripLeavesRoomForTheGear() {
+    /// The grip and the gear both need room of their own, or there is nowhere
+    /// left to grab the strip by.
+    func testTheStripLeavesRoomForTheGripAndTheGear() {
         XCTAssertGreaterThanOrEqual(
             RailGeometry.stripSize(itemCount: 0).width,
-            RailGeometry.stripTrailing
+            RailGeometry.stripLeading + RailGeometry.stripTrailing
         )
     }
 

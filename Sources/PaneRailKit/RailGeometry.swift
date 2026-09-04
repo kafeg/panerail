@@ -16,6 +16,9 @@ public enum RailGeometry {
     public static let stripItemSide: CGFloat = 26
     public static let stripHeight: CGFloat = 32
     public static let stripPadding: CGFloat = 5
+    /// The grip. Without one the strip has nowhere to grab: icons and the gear
+    /// take every click across the rest of it.
+    public static let stripLeading: CGFloat = 16
     public static let stripTrailing: CGFloat = 22
     public static let maxVisibleStripItems = 16
 
@@ -51,7 +54,7 @@ public enum RailGeometry {
     /// its own arithmetic rather than a transposed panel size.
     public static func stripSize(itemCount: Int, maxItems: Int = maxVisibleStripItems) -> CGSize {
         let shown = min(max(itemCount, 0), max(1, maxItems))
-        let width = stripPadding * 2 + CGFloat(shown) * stripItemSide + stripTrailing
+        let width = stripPadding * 2 + stripLeading + CGFloat(shown) * stripItemSide + stripTrailing
         return CGSize(width: width, height: stripHeight)
     }
 

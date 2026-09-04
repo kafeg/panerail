@@ -9,6 +9,7 @@ struct RailView: View {
 
     @State private var hoveredID: UInt64?
     @State private var isHoveringSettings = false
+    @State private var isHoveringGrip = false
 
     private let cornerRadius: CGFloat = 10
 
@@ -66,10 +67,33 @@ struct RailView: View {
         .background(WindowDragHandle())
     }
 
-    /// The horizontal layout: glyphs only, with the name in a tooltip. The
-    /// strip itself is the drag handle, since there is no header to grab.
+    /// The handle for the horizontal layout, which has no header to grab.
+    private var stripGrip: some View {
+        // Drawn rather than an SF Symbol: the obvious symbol names for a grip
+        // do not all exist, and a missing one renders as nothing at all.
+        HStack(spacing: 3) {
+            ForEach(0..<2, id: \.self) { _ in
+                VStack(spacing: 3) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Circle().frame(width: 2, height: 2)
+                    }
+                }
+            }
+        }
+            .foregroundStyle(Color.secondary)
+            .opacity(isHoveringGrip ? 0.95 : 0.5)
+            .frame(width: RailGeometry.stripLeading, height: RailGeometry.stripHeight)
+            .contentShape(Rectangle())
+            .onHover { isHoveringGrip = $0 }
+            .background(WindowDragHandle())
+            .help("Drag to move")
+    }
+
+    /// The horizontal layout: glyphs only, with the name in a tooltip.
     private var iconStrip: some View {
         HStack(spacing: 0) {
+            stripGrip
+
             ForEach(coordinator.items) { item in
                 stripCell(for: item)
             }
