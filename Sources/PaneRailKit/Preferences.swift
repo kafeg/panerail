@@ -103,7 +103,8 @@ public final class Preferences: ObservableObject {
     }
 
     /// Whether apps that keep their own internal states — Vivaldi's workspaces,
-    /// for instance — show those instead of their windows.
+    /// for instance — contribute those as a further section beside their
+    /// windows.
     ///
     /// Off by default: it leans on undocumented internals of the app in
     /// question and can break when that app updates.

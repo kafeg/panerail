@@ -45,8 +45,8 @@ enum DeveloperCommands {
             finish(PreviewRenderer.render(to: path, dark: dark))
         }
 
-        if let path = value(after: "--render-strip") {
-            finish(PreviewRenderer.renderStrip(to: path, dark: dark))
+        if let path = value(after: "--render-sections") {
+            finish(PreviewRenderer.renderSections(to: path, dark: dark))
         }
 
         if let path = value(after: "--render-settings") {

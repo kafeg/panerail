@@ -114,12 +114,14 @@ final class RailCoordinatorTests: XCTestCase {
         XCTAssertFalse(coordinator.isVisible)
     }
 
-    func testHiddenBelowTheWindowThreshold() {
+    /// Below the threshold the window section is left out altogether, rather
+    /// than built and then hidden: with nothing else to show, there is no rail.
+    func testBelowTheWindowThresholdThereIsNothingToShow() {
         let (coordinator, _) = makeCoordinator(source: makeSource(["only one"]))
         coordinator.setFrontmost(makeApp())
 
-        XCTAssertEqual(coordinator.items.count, 1, "the list is still populated")
-        XCTAssertFalse(coordinator.isVisible, "but the rail stays hidden")
+        XCTAssertTrue(coordinator.sections.isEmpty)
+        XCTAssertFalse(coordinator.isVisible)
     }
 
     func testWithoutAccessibilityThereAreNoWindows() {
@@ -153,7 +155,7 @@ final class RailCoordinatorTests: XCTestCase {
         let target = coordinator.items[1]
         XCTAssertTrue(coordinator.select(target))
         XCTAssertEqual(source.raiseCalls.count, 1)
-        XCTAssertEqual(source.raiseCalls.first?.window.id, target.id)
+        XCTAssertEqual(source.raiseCalls.first?.window.id, target.id.value)
         XCTAssertEqual(source.raiseCalls.first?.pid, pid)
     }
 

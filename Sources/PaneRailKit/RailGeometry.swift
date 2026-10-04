@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 
 /// Layout arithmetic for the floating panel, kept free of AppKit so it can be
 /// exercised without a window server.
@@ -6,36 +7,70 @@ public enum RailGeometry {
     public static let rowHeight: CGFloat = 28
     public static let headerHeight: CGFloat = 30
     public static let verticalPadding: CGFloat = 6
-    /// The hairline between the header and the window list.
+    /// The hairline under the header, and between sections.
     public static let dividerHeight: CGFloat = 1
+    /// Shown above a section only when the rail has more than one.
+    public static let sectionTitleHeight: CGFloat = 19
     public static let maxVisibleRows = 12
     /// Gap between the rail and the screen edge in the default placement.
     public static let screenMargin: CGFloat = 24
 
-    // The horizontal layout: one square per row, plus room for the gear.
-    public static let stripItemSide: CGFloat = 26
-    public static let stripHeight: CGFloat = 32
-    public static let stripPadding: CGFloat = 5
-    /// The grip. Without one the strip has nowhere to grab: icons and the gear
-    /// take every click across the rest of it.
-    public static let stripLeading: CGFloat = 16
-    public static let stripTrailing: CGFloat = 22
-    public static let maxVisibleStripItems = 16
+    /// One square per glyph in a `.glyphs` section.
+    public static let glyphCellSide: CGFloat = 26
+    public static let contentHorizontalPadding: CGFloat = 8
 
-    /// Long window lists scroll rather than growing a panel taller than the screen.
+    /// Long lists scroll rather than growing a panel taller than the screen.
     public static func visibleRowCount(for itemCount: Int, maxRows: Int = maxVisibleRows) -> Int {
         guard itemCount > 0 else { return 0 }
         return min(itemCount, max(1, maxRows))
     }
 
+    /// Glyphs wrap: the panel's width is set by the list sections, so a long
+    /// row of them has to fold onto a second line rather than widen the rail.
+    public static func glyphRowCount(itemCount: Int, width: CGFloat) -> Int {
+        guard itemCount > 0 else { return 0 }
+        let available = max(width - contentHorizontalPadding * 2, glyphCellSide)
+        let perRow = max(1, Int(available / glyphCellSide))
+        return Int((Double(itemCount) / Double(perRow)).rounded(.up))
+    }
+
+    public static func sectionHeight(
+        _ section: RailSection,
+        width: CGFloat,
+        showsTitle: Bool,
+        maxRows: Int = maxVisibleRows
+    ) -> CGFloat {
+        let title = showsTitle ? sectionTitleHeight : 0
+
+        switch section.layout {
+        case .list:
+            return title + CGFloat(visibleRowCount(for: section.items.count, maxRows: maxRows)) * rowHeight
+        case .glyphs:
+            return title + CGFloat(glyphRowCount(itemCount: section.items.count, width: width)) * glyphCellSide
+        }
+    }
+
+    /// Titles earn their place only when there is more than one section to tell
+    /// apart; a single-section rail must look exactly as it always did.
+    public static func showsSectionTitles(_ sections: [RailSection]) -> Bool {
+        sections.count > 1
+    }
+
     public static func panelSize(
-        itemCount: Int,
+        sections: [RailSection],
         width: CGFloat,
         maxRows: Int = maxVisibleRows
     ) -> CGSize {
-        let rows = visibleRowCount(for: itemCount, maxRows: maxRows)
-        let height = headerHeight + dividerHeight + CGFloat(rows) * rowHeight + verticalPadding * 2
-        return CGSize(width: width, height: height)
+        let chrome = headerHeight + dividerHeight + verticalPadding * 2
+        guard !sections.isEmpty else { return CGSize(width: width, height: chrome) }
+
+        let showsTitles = showsSectionTitles(sections)
+        let content = sections.reduce(CGFloat.zero) { total, section in
+            total + sectionHeight(section, width: width, showsTitle: showsTitles, maxRows: maxRows)
+        }
+        let separators = CGFloat(sections.count - 1) * dividerHeight
+
+        return CGSize(width: width, height: chrome + content + separators)
     }
 
     /// Keeps the panel fully on screen. A panel larger than the visible frame
@@ -48,27 +83,6 @@ public enum RailGeometry {
             x: min(max(origin.x, visibleFrame.minX), maxX),
             y: min(max(origin.y, visibleFrame.minY), maxY)
         )
-    }
-
-    /// The horizontal layout grows sideways instead of downwards, so it needs
-    /// its own arithmetic rather than a transposed panel size.
-    public static func stripSize(itemCount: Int, maxItems: Int = maxVisibleStripItems) -> CGSize {
-        let shown = min(max(itemCount, 0), max(1, maxItems))
-        let width = stripPadding * 2 + stripLeading + CGFloat(shown) * stripItemSide + stripTrailing
-        return CGSize(width: width, height: stripHeight)
-    }
-
-    public static func size(
-        for layout: RailLayout,
-        itemCount: Int,
-        width: CGFloat
-    ) -> CGSize {
-        switch layout {
-        case .list:
-            return panelSize(itemCount: itemCount, width: width)
-        case .iconStrip:
-            return stripSize(itemCount: itemCount)
-        }
     }
 
     /// Placement for an app the rail has not been positioned for: the top

@@ -14,11 +14,17 @@ import Foundation
 /// - Switching goes through the built-in `Ctrl+Shift+<n>` shortcut. Pressing
 ///   the matching menu item over the accessibility API reports success and does
 ///   nothing, because Chromium wires those items up only while the menu is open.
+/// The workspaces are contributed alongside the window list rather than instead
+/// of it: Vivaldi can have several windows — a private one next to a normal one,
+/// or a second session — and a workspace switch applies to whichever is in front.
+///
 /// - The active workspace is read back from the "Other Workspaces and Tabs"
 ///   menu, which lists everything except the workspace in use; the one missing
 ///   from it is the active one. When that cannot be established unambiguously,
 ///   no row is highlighted rather than the wrong one.
 public final class VivaldiRailProvider: RailItemProvider {
+    public static let sectionID = "vivaldi.workspaces"
+
     /// Ctrl+Shift+1 selects the window's own tabs — the entry with no
     /// workspace — so the first workspace answers to the second digit.
     static let firstWorkspaceDigit = 2
@@ -46,15 +52,6 @@ public final class VivaldiRailProvider: RailItemProvider {
         self.prefersIconStrip = prefersIconStrip
     }
 
-    /// The strip is only offered when every workspace actually has a glyph;
-    /// otherwise it would be a row of anonymous placeholders.
-    public func layout(for app: FrontmostApp) -> RailLayout {
-        let list = workspaces()
-        guard prefersIconStrip(), !list.isEmpty, list.allSatisfy({ $0.icon?.isEmpty == false }) else {
-            return .list
-        }
-        return .iconStrip
-    }
 
     /// The digit of the built-in shortcut for a workspace, or `nil` when it is
     /// past the end of what Vivaldi binds.
@@ -67,11 +64,12 @@ public final class VivaldiRailProvider: RailItemProvider {
         app.bundleIdentifier == VivaldiWorkspaces.bundleIdentifier && !workspaces().isEmpty
     }
 
-    public func items(for app: FrontmostApp) -> [RailItem] {
+    public func section(for app: FrontmostApp) -> RailSection? {
         let list = workspaces()
-        let active = activeReader?.activeIndex(among: list, pid: app.pid)
+        guard !list.isEmpty else { return nil }
 
-        return list.map { workspace in
+        let active = activeReader?.activeIndex(among: list, pid: app.pid)
+        let items = list.map { workspace in
             RailItem(
                 id: UInt64(workspace.index),
                 title: workspace.name,
@@ -82,11 +80,22 @@ public final class VivaldiRailProvider: RailItemProvider {
                 iconSVG: workspace.icon
             )
         }
+
+        return RailSection(
+            id: Self.sectionID,
+            title: "Workspaces",
+            // Glyphs are only offered when every workspace actually has one;
+            // otherwise the section would be a row of anonymous placeholders.
+            layout: prefersIconStrip() && list.allSatisfy { $0.icon?.isEmpty == false }
+                ? .glyphs
+                : .list,
+            items: items
+        )
     }
 
     @discardableResult
     public func activate(_ item: RailItem, in app: FrontmostApp) -> Bool {
-        guard let digit = Self.shortcutDigit(forWorkspaceAt: Int(item.id)) else { return false }
+        guard let digit = Self.shortcutDigit(forWorkspaceAt: Int(item.id.value)) else { return false }
         sender.sendControlShift(digit: digit, to: app.pid)
         return true
     }

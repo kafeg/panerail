@@ -55,23 +55,27 @@ final class VivaldiRailProviderTests: XCTestCase {
 
     func testWorkspaceIconsAreCarriedThrough() {
         write(names: ["Work", "Home"], icons: true)
-        XCTAssertTrue(makeProvider().items(for: vivaldi()).allSatisfy { $0.iconSVG != nil })
+        XCTAssertTrue(items(of: makeProvider()).allSatisfy { $0.iconSVG != nil })
     }
 
     func testTheListIsTheDefaultLayout() {
         write(names: ["Work", "Home"], icons: true)
-        XCTAssertEqual(makeProvider().layout(for: vivaldi()), .list)
+        XCTAssertEqual(makeProvider().section(for: vivaldi())?.layout, .list)
     }
 
     func testTheStripIsOfferedWhenAskedForAndEveryWorkspaceHasAGlyph() {
         write(names: ["Work", "Home"], icons: true)
-        XCTAssertEqual(makeProvider(iconStrip: true).layout(for: vivaldi()), .iconStrip)
+        XCTAssertEqual(makeProvider(iconStrip: true).section(for: vivaldi())?.layout, .glyphs)
     }
 
     /// A strip of anonymous placeholders would be worse than the list.
     func testTheStripIsDeclinedWhenAGlyphIsMissing() {
         write(names: ["Work", "Home"], icons: false)
-        XCTAssertEqual(makeProvider(iconStrip: true).layout(for: vivaldi()), .list)
+        XCTAssertEqual(makeProvider(iconStrip: true).section(for: vivaldi())?.layout, .list)
+    }
+
+    private func items(of provider: VivaldiRailProvider) -> [RailItem] {
+        provider.section(for: vivaldi())?.items ?? []
     }
 
     private func vivaldi(pid: pid_t = 900) -> FrontmostApp {
@@ -100,14 +104,14 @@ final class VivaldiRailProviderTests: XCTestCase {
 
     func testItemsFollowTheStoredOrder() {
         write(names: ["Work", "Home", "Media"])
-        let items = makeProvider().items(for: vivaldi())
+        let items = items(of: makeProvider())
         XCTAssertEqual(items.map(\.title), ["Work", "Home", "Media"])
-        XCTAssertEqual(items.map(\.id), [0, 1, 2])
+        XCTAssertEqual(items.map(\.id.value), [0, 1, 2])
     }
 
     func testTheActiveWorkspaceIsMarked() {
         write(names: ["Work", "Home", "Media"])
-        let items = makeProvider(active: 1).items(for: vivaldi())
+        let items = items(of: makeProvider(active: 1))
         XCTAssertEqual(items.filter(\.isActive).map(\.title), ["Home"])
     }
 
@@ -115,16 +119,16 @@ final class VivaldiRailProviderTests: XCTestCase {
     /// row would be worse than highlighting none.
     func testNothingIsMarkedWhenTheActiveWorkspaceIsUnknown() {
         write(names: ["Work", "Home"])
-        XCTAssertTrue(makeProvider(active: nil).items(for: vivaldi()).allSatisfy { !$0.isActive })
+        XCTAssertTrue(items(of: makeProvider(active: nil)).allSatisfy { !$0.isActive })
     }
 
     /// Ctrl+Shift+1 selects the window's own tabs rather than a workspace, so
     /// the first workspace answers to the second digit and only eight fit.
     func testWorkspacesPastTheLastShortcutAreShownDimmed() {
         write(names: (1...11).map { "W\($0)" })
-        let items = makeProvider().items(for: vivaldi())
+        let items = items(of: makeProvider())
         XCTAssertEqual(items.count, 11)
-        XCTAssertEqual(items.filter(\.isDimmed).map(\.id), [8, 9, 10])
+        XCTAssertEqual(items.filter(\.isDimmed).map(\.id.value), [8, 9, 10])
         XCTAssertEqual(VivaldiRailProvider.switchableCount, 8)
     }
 
@@ -163,13 +167,13 @@ final class VivaldiRailProviderTests: XCTestCase {
     func testPicksUpAnEditedProfile() {
         write(names: ["Work"])
         let provider = makeProvider()
-        XCTAssertEqual(provider.items(for: vivaldi()).map(\.title), ["Work"])
+        XCTAssertEqual(items(of: provider).map(\.title), ["Work"])
 
         // A later modification date is what invalidates the cache.
         write(names: ["Work", "Home"])
         try? FileManager.default.setAttributes(
             [.modificationDate: Date().addingTimeInterval(5)], ofItemAtPath: fileURL.path
         )
-        XCTAssertEqual(provider.items(for: vivaldi()).map(\.title), ["Work", "Home"])
+        XCTAssertEqual(items(of: provider).map(\.title), ["Work", "Home"])
     }
 }

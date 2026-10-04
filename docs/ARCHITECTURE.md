@@ -7,16 +7,37 @@ permission grant.
 | Piece | Role |
 | --- | --- |
 | `FrontmostAppMonitor` | Watches `NSWorkspace` activation, ignoring PaneRail itself |
-| `RailItemProvider` | Supplies the rows for an app, acts on a click, and says how they should be laid out |
-| `WindowRailProvider` | The default: windows read and raised through `AXUIElement` |
-| `VivaldiRailProvider` | Workspaces, when app-specific states are switched on |
-| `RailCoordinator` | Picks the provider, holds the rows, decides visibility |
+| `RailItemProvider` | Contributes a section of rows for an app and acts on a click |
+| `WindowRailProvider` | Always present: windows read and raised through `AXUIElement` |
+| `VivaldiRailProvider` | A second section of workspaces, when app-specific states are switched on |
+| `RailCoordinator` | Assembles the sections, routes clicks back to their providers, decides visibility |
 | `RailVisibility` / `RailGeometry` | The pure show/hide rule and the panel maths |
 | `RailPanel` | A borderless, non-activating `NSPanel` floating above everything |
 
 `PaneRailKit` is a static library rather than a framework on purpose: the
 hardened runtime enables library validation, which refuses to load an embedded
 framework whose ad-hoc signature was produced independently of the app's.
+
+## Sections
+
+Providers contribute rather than compete. The window section is always asked
+for; an app-specific provider adds another beside it. Replacing windows outright
+would take away window switching at the very moment an app has several windows —
+a browser with a private window open next to a normal one.
+
+Row identity is scoped by section. A window's id is an accessibility element
+hash and a workspace's is its position in a list, so the two numbering spaces
+overlap freely; without scoping, a click could land in the wrong section or two
+rows could highlight at once. `RailSection` stamps its own id onto every item it
+adopts, so providers go on using their own numbering and collisions are
+impossible by construction rather than by care.
+
+The "appear from n windows" threshold applies to the window section alone. One
+window beside eight workspaces is a row of noise, but the workspaces are still
+worth showing — so that rail opens with workspaces only.
+
+Section titles appear only when there is more than one section, so a rail
+showing just windows looks exactly as it always did.
 
 ## Reading and raising windows
 

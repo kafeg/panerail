@@ -17,7 +17,8 @@ struct AdvancedSettingsView: View {
                     .font(.headline)
                 Text("""
                 Some applications keep their own internal states that matter \
-                more than their windows. The rail can show those instead.
+                more than their windows. The rail can list those as well, below \
+                the windows.
                 """)
                     .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(.secondary)
@@ -60,7 +61,8 @@ struct AdvancedSettingsView: View {
                         Toggle("Show as a row of icons", isOn: $preferences.vivaldiIconStrip)
                             .disabled(!preferences.appSpecificProviders)
                         Text("""
-                        Each workspace becomes its own glyph. Names are not shown: \
+                        The workspaces become a row of glyphs under the window \
+                        list. Names are not shown: \
                         macOS draws tooltips only for the active application, and \
                         the rail never becomes one, which is what stops it stealing \
                         focus. Falls back to the list when a workspace has no icon.

@@ -16,7 +16,7 @@ enum PreviewRenderer {
         coordinator.setFrontmost(DemoData.app)
 
         let railSize = RailGeometry.panelSize(
-            itemCount: coordinator.items.count,
+            sections: coordinator.sections,
             width: CGFloat(preferences.width)
         )
 
@@ -87,7 +87,7 @@ enum PreviewRenderer {
             preferences: preferences
         )
         coordinator.setFrontmost(app)
-        guard !coordinator.items.isEmpty else {
+        guard !coordinator.sections.isEmpty else {
             print("\(app.name) has no windows to show")
             return false
         }
@@ -99,9 +99,8 @@ enum PreviewRenderer {
                 onOpenSettings: {},
                 onSelect: { _ in }
             ),
-            size: RailGeometry.size(
-                for: coordinator.layout,
-                itemCount: coordinator.items.count,
+            size: RailGeometry.panelSize(
+                sections: coordinator.sections,
                 width: CGFloat(preferences.width)
             ),
             dark: dark,
@@ -109,15 +108,19 @@ enum PreviewRenderer {
         )
     }
 
-    /// Renders the horizontal layout, which no other preview can reach: it is
-    /// chosen by a provider, not by a setting the renderer could flip.
-    static func renderStrip(to path: String, dark: Bool) -> Bool {
+    /// Renders a rail with two sections — windows and an app's own states —
+    /// which no other preview can reach: it depends on how many windows the
+    /// front app happens to have.
+    static func renderSections(to path: String, dark: Bool) -> Bool {
         let suite = UserDefaults(suiteName: "dev.kafeg.panerail.preview") ?? .standard
         suite.removePersistentDomain(forName: "dev.kafeg.panerail.preview")
         let preferences = Preferences(defaults: suite)
 
+        preferences.appSpecificProviders = true
+
         let coordinator = RailCoordinator(
-            windowProvider: StripPreviewProvider(),
+            windowProvider: WindowRailProvider(source: DemoData.makeSource()),
+            appSpecificProviders: [GlyphPreviewProvider()],
             preferences: preferences
         )
         coordinator.setFrontmost(DemoData.app)
@@ -129,7 +132,10 @@ enum PreviewRenderer {
                 onOpenSettings: {},
                 onSelect: { _ in }
             ),
-            size: RailGeometry.stripSize(itemCount: coordinator.items.count),
+            size: RailGeometry.panelSize(
+                sections: coordinator.sections,
+                width: CGFloat(preferences.width)
+            ),
             dark: dark,
             to: path
         )
@@ -180,7 +186,7 @@ enum PreviewRenderer {
 
     /// Scripted glyphs shaped like Vivaldi's: 16-point outlines that inherit
     /// their colour.
-    private final class StripPreviewProvider: RailItemProvider {
+    private final class GlyphPreviewProvider: RailItemProvider {
         private static let shapes = [
             ("Work", "M8 0.74L9.73 6.27H15.5L10.92 9.71L12.72 15.26L8 11.83L3.28 15.26L5.08 9.71L0.5 6.27H6.27L8 0.74Z"),
             ("Personal", "M3 3H13V13H3V3Z"),
@@ -191,20 +197,23 @@ enum PreviewRenderer {
 
         func supports(_ app: FrontmostApp) -> Bool { true }
 
-        func items(for app: FrontmostApp) -> [RailItem] {
-            Self.shapes.enumerated().map { index, shape in
-                RailItem(
-                    id: UInt64(index),
-                    title: shape.0,
-                    isActive: index == 1,
-                    iconSVG: #"<svg viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="\#(shape.1)"/></svg>"#
-                )
-            }
+        func section(for app: FrontmostApp) -> RailSection? {
+            RailSection(
+                id: "preview.glyphs",
+                title: "Workspaces",
+                layout: .glyphs,
+                items: Self.shapes.enumerated().map { index, shape in
+                    RailItem(
+                        id: UInt64(index),
+                        title: shape.0,
+                        isActive: index == 1,
+                        iconSVG: #"<svg viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="\#(shape.1)"/></svg>"#
+                    )
+                }
+            )
         }
 
         func activate(_ item: RailItem, in app: FrontmostApp) -> Bool { true }
-
-        func layout(for app: FrontmostApp) -> RailLayout { .iconStrip }
     }
 
     private final class BackdropView: NSView {

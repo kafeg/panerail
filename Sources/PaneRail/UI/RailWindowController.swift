@@ -37,9 +37,8 @@ final class RailWindowController {
         // delivered on the run loop the properties behind them have settled —
         // so the handler reads current state instead of juggling combinators.
         let triggers: [AnyPublisher<Void, Never>] = [
-            coordinator.$items.map { _ in () }.eraseToAnyPublisher(),
+            coordinator.$sections.map { _ in () }.eraseToAnyPublisher(),
             coordinator.$isVisible.map { _ in () }.eraseToAnyPublisher(),
-            coordinator.$layout.map { _ in () }.eraseToAnyPublisher(),
             // The front app matters: in per-application mode each one has its
             // own remembered position.
             coordinator.$app.map { _ in () }.eraseToAnyPublisher(),
@@ -68,18 +67,14 @@ final class RailWindowController {
     }
 
     private func apply() {
-        let itemCount = coordinator.items.count
-        let size = RailGeometry.size(
-            for: coordinator.layout,
-            itemCount: itemCount,
-            width: CGFloat(preferences.width)
-        )
+        let sections = coordinator.sections
+        let size = RailGeometry.panelSize(sections: sections, width: CGFloat(preferences.width))
 
         isAdjustingFrame = true
         panel.setFrame(targetFrame(for: size), display: true)
         isAdjustingFrame = false
 
-        setVisible(coordinator.isVisible && itemCount > 0)
+        setVisible(coordinator.isVisible && !sections.isEmpty)
     }
 
     private func setVisible(_ visible: Bool) {

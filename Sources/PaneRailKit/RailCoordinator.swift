@@ -1,18 +1,18 @@
 import Combine
 import Foundation
 
-/// Owns the rail's state: which app is in front, what rows it should show, and
+/// Owns the rail's state: which app is in front, what it should show, and
 /// whether the panel belongs on screen at all.
 ///
-/// Rows come from a provider chosen per app, so an application that keeps its
-/// own internal states can offer those instead of its windows. Everything is
-/// injected, so the whole decision path is exercised by tests without a window
-/// server or an Accessibility grant.
+/// Rows arrive as sections. The window section is always asked for; an
+/// application that keeps its own internal states contributes a further section
+/// beside it rather than in place of it. Everything is injected, so the whole
+/// decision path is exercised by tests without a window server or an
+/// Accessibility grant.
 public final class RailCoordinator: ObservableObject {
     @Published public private(set) var app: FrontmostApp?
-    @Published public private(set) var items: [RailItem] = []
+    @Published public private(set) var sections: [RailSection] = []
     @Published public private(set) var isVisible = false
-    @Published public private(set) var layout: RailLayout = .list
 
     public let preferences: Preferences
 
@@ -20,9 +20,9 @@ public final class RailCoordinator: ObservableObject {
     private let appSpecificProviders: [RailItemProvider]
     private let isTrusted: () -> Bool
     private let fullScreenDetector: FullScreenDetecting?
-    /// The provider that produced the current rows, so a click goes back to
-    /// whichever one knows how to act on them.
-    private var activeProvider: RailItemProvider?
+    /// Which provider owns which section, so a click goes back to whoever
+    /// knows how to act on that row.
+    private var providersBySection: [String: RailItemProvider] = [:]
     private var cancellables = Set<AnyCancellable>()
 
     public init(
@@ -62,10 +62,12 @@ public final class RailCoordinator: ObservableObject {
         refresh()
     }
 
-    /// Which provider describes this app, honouring the user's preference.
-    public func provider(for app: FrontmostApp) -> RailItemProvider {
-        guard preferences.appSpecificProviders else { return windowProvider }
-        return appSpecificProviders.first { $0.supports(app) } ?? windowProvider
+    /// The providers contributing to this app, in the order their sections
+    /// appear. Windows come first and always; the rest only when the user has
+    /// asked for app-specific states.
+    public func providers(for app: FrontmostApp) -> [RailItemProvider] {
+        guard preferences.appSpecificProviders else { return [windowProvider] }
+        return [windowProvider] + appSpecificProviders.filter { $0.supports(app) }
     }
 
     public func refresh() {
@@ -91,35 +93,48 @@ public final class RailCoordinator: ObservableObject {
         )
         guard RailVisibility.isEligible(input) else { return clear() }
 
-        let provider = provider(for: app)
-        activeProvider = provider
+        var newSections: [RailSection] = []
+        var owners: [String: RailItemProvider] = [:]
 
-        let newItems = provider.items(for: app)
-        if newItems != items { items = newItems }
+        for provider in providers(for: app) {
+            guard let section = provider.section(for: app), !section.items.isEmpty else { continue }
+            guard keeps(section) else { continue }
+            newSections.append(section)
+            owners[section.id] = provider
+        }
 
-        let newLayout = provider.layout(for: app)
-        if newLayout != layout { layout = newLayout }
+        providersBySection = owners
+        if newSections != sections { sections = newSections }
+        if isVisible != !newSections.isEmpty { isVisible = !newSections.isEmpty }
+    }
 
-        let visible = RailVisibility.meetsThreshold(
-            itemCount: newItems.count,
+    /// The "appear from n windows" threshold is about windows, not about
+    /// everything the rail can show: a browser with one window and eight
+    /// workspaces still has plenty to switch between, and a lone window row
+    /// beside them would be noise.
+    private func keeps(_ section: RailSection) -> Bool {
+        guard section.id == WindowRailProvider.sectionID else { return true }
+        return RailVisibility.meetsThreshold(
+            itemCount: section.items.count,
             minimumItems: preferences.minimumWindows
         )
-        if visible != isVisible { isVisible = visible }
     }
 
     private func clear() {
-        if !items.isEmpty { items = [] }
+        if !sections.isEmpty { sections = [] }
         if isVisible { isVisible = false }
-        if layout != .list { layout = .list }
-        activeProvider = nil
+        providersBySection = [:]
     }
 
-    /// Acts on a row. Returns whether the provider reported success.
+    /// Acts on a row, through whichever provider owns the section it came from.
     @discardableResult
     public func select(_ item: RailItem) -> Bool {
-        guard let app, let provider = activeProvider else { return false }
+        guard let app, let provider = providersBySection[item.id.section] else { return false }
         let acted = provider.activate(item, in: app)
         refresh()
         return acted
     }
+
+    /// Every row across every section, for callers that only need a count.
+    public var items: [RailItem] { sections.flatMap(\.items) }
 }
