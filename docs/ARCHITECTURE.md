@@ -11,6 +11,7 @@ permission grant.
 | `WindowRailProvider` | Always present: windows read and raised through `AXUIElement` |
 | `VivaldiRailProvider` | A second section of workspaces, when app-specific states are switched on |
 | `RailCoordinator` | Assembles the sections, routes clicks back to their providers, decides visibility |
+| `RailPanels` | Keeps one floating panel per section |
 | `RailVisibility` / `RailGeometry` | The pure show/hide rule and the panel maths |
 | `RailPanel` | A borderless, non-activating `NSPanel` floating above everything |
 
@@ -18,12 +19,18 @@ permission grant.
 hardened runtime enables library validation, which refuses to load an embedded
 framework whose ad-hoc signature was produced independently of the app's.
 
-## Sections
+## Sections and panels
 
 Providers contribute rather than compete. The window section is always asked
 for; an app-specific provider adds another beside it. Replacing windows outright
 would take away window switching at the very moment an app has several windows —
 a browser with a private window open next to a normal one.
+
+Each section gets a floating panel of its own rather than sharing one. The rail
+of windows is then the same object in every application, whatever else is on
+screen, and a panel of an app's own states is a separate thing to place and
+size. Positions are stored per panel, keyed by the section it shows, which is
+the only identity a panel has.
 
 Row identity is scoped by section. A window's id is an accessibility element
 hash and a workspace's is its position in a list, so the two numbering spaces
@@ -35,9 +42,6 @@ impossible by construction rather than by care.
 The "appear from n windows" threshold applies to the window section alone. One
 window beside eight workspaces is a row of noise, but the workspaces are still
 worth showing — so that rail opens with workspaces only.
-
-Section titles appear only when there is more than one section, so a rail
-showing just windows looks exactly as it always did.
 
 ## Reading and raising windows
 

@@ -143,70 +143,107 @@ final class PreferencesTests: XCTestCase {
 
     // MARK: - Position modes
 
+    private let windows = WindowRailProvider.sectionID
+    private let workspaces = "vivaldi.workspaces"
+
     func testSharedModeGivesEveryAppTheSamePosition() {
         let preferences = makePreferences()
         preferences.positionMode = .shared
-        preferences.setOrigin(CGPoint(x: 10, y: 20), for: "com.example.a")
+        preferences.setOrigin(CGPoint(x: 10, y: 20), for: "com.example.a", section: windows)
 
-        XCTAssertEqual(preferences.origin(for: "com.example.a"), CGPoint(x: 10, y: 20))
-        XCTAssertEqual(preferences.origin(for: "com.example.b"), CGPoint(x: 10, y: 20))
+        XCTAssertEqual(preferences.origin(for: "com.example.a", section: windows), CGPoint(x: 10, y: 20))
+        XCTAssertEqual(preferences.origin(for: "com.example.b", section: windows), CGPoint(x: 10, y: 20))
     }
 
     func testPerAppModeKeepsPositionsApart() {
         let preferences = makePreferences()
-        preferences.positionMode = .perApp
-        preferences.setOrigin(CGPoint(x: 10, y: 20), for: "com.example.a")
-        preferences.setOrigin(CGPoint(x: 90, y: 80), for: "com.example.b")
+        preferences.setOrigin(CGPoint(x: 10, y: 20), for: "com.example.a", section: windows)
+        preferences.setOrigin(CGPoint(x: 90, y: 80), for: "com.example.b", section: windows)
 
-        XCTAssertEqual(preferences.origin(for: "com.example.a"), CGPoint(x: 10, y: 20))
-        XCTAssertEqual(preferences.origin(for: "com.example.b"), CGPoint(x: 90, y: 80))
+        XCTAssertEqual(preferences.origin(for: "com.example.a", section: windows), CGPoint(x: 10, y: 20))
+        XCTAssertEqual(preferences.origin(for: "com.example.b", section: windows), CGPoint(x: 90, y: 80))
     }
 
-    /// An app the rail has never been placed for starts at the default
-    /// position. Inheriting another application's spot would put it somewhere
-    /// the user never chose for the app in front of them.
+    /// The rail of windows and the panel of an app's own states are separate
+    /// objects on screen; dragging one says nothing about where the other goes.
+    func testEachPanelRemembersItsOwnPlace() {
+        let preferences = makePreferences()
+        preferences.setOrigin(CGPoint(x: 10, y: 20), for: "com.example.a", section: windows)
+        preferences.setOrigin(CGPoint(x: 400, y: 300), for: "com.example.a", section: workspaces)
+
+        XCTAssertEqual(preferences.origin(for: "com.example.a", section: windows), CGPoint(x: 10, y: 20))
+        XCTAssertEqual(preferences.origin(for: "com.example.a", section: workspaces), CGPoint(x: 400, y: 300))
+    }
+
+    func testPanelsStayApartInSharedModeToo() {
+        let preferences = makePreferences()
+        preferences.positionMode = .shared
+        preferences.setOrigin(CGPoint(x: 10, y: 20), for: "com.example.a", section: windows)
+        preferences.setOrigin(CGPoint(x: 400, y: 300), for: "com.example.a", section: workspaces)
+
+        XCTAssertEqual(preferences.origin(for: "com.example.b", section: windows), CGPoint(x: 10, y: 20))
+        XCTAssertEqual(preferences.origin(for: "com.example.b", section: workspaces), CGPoint(x: 400, y: 300))
+    }
+
+    /// An app the panel has never been placed for starts at the default, rather
+    /// than somewhere chosen for a different app.
     func testAnAppWithNoPositionOfItsOwnHasNone() {
         let preferences = makePreferences()
-        preferences.setOrigin(CGPoint(x: 33, y: 44), for: "com.example.a")
+        preferences.setOrigin(CGPoint(x: 33, y: 44), for: "com.example.a", section: windows)
 
-        XCTAssertNil(preferences.origin(for: "com.example.newcomer"))
-        XCTAssertNil(preferences.origin(for: nil))
+        XCTAssertNil(preferences.origin(for: "com.example.newcomer", section: windows))
+        XCTAssertNil(preferences.origin(for: nil, section: windows))
+        XCTAssertNil(preferences.origin(for: "com.example.a", section: workspaces))
     }
 
-    func testPerAppPositionsSurviveARestart() {
+    func testPositionsSurviveARestart() {
         let first = makePreferences()
-        first.positionMode = .perApp
-        first.setOrigin(CGPoint(x: 12, y: 34), for: "com.example.a")
+        first.setOrigin(CGPoint(x: 12, y: 34), for: "com.example.a", section: windows)
+        first.setOrigin(CGPoint(x: 56, y: 78), for: "com.example.a", section: workspaces)
 
         let second = makePreferences()
         XCTAssertEqual(second.positionMode, .perApp)
-        XCTAssertEqual(second.origin(for: "com.example.a"), CGPoint(x: 12, y: 34))
+        XCTAssertEqual(second.origin(for: "com.example.a", section: windows), CGPoint(x: 12, y: 34))
+        XCTAssertEqual(second.origin(for: "com.example.a", section: workspaces), CGPoint(x: 56, y: 78))
     }
 
     /// Switching back to one shared position must not lose what each app
     /// remembered, in case the user changes their mind.
     func testPerAppPositionsAreKeptWhileInSharedMode() {
         let preferences = makePreferences()
-        preferences.positionMode = .perApp
-        preferences.setOrigin(CGPoint(x: 12, y: 34), for: "com.example.a")
-        preferences.setOrigin(CGPoint(x: 56, y: 78), for: "com.example.b")
+        preferences.setOrigin(CGPoint(x: 12, y: 34), for: "com.example.a", section: windows)
+        preferences.setOrigin(CGPoint(x: 56, y: 78), for: "com.example.b", section: windows)
 
         preferences.positionMode = .shared
-        XCTAssertEqual(preferences.origin(for: "com.example.a"), CGPoint(x: 56, y: 78))
+        XCTAssertEqual(preferences.origin(for: "com.example.a", section: windows), CGPoint(x: 56, y: 78))
 
         preferences.positionMode = .perApp
-        XCTAssertEqual(preferences.origin(for: "com.example.a"), CGPoint(x: 12, y: 34))
+        XCTAssertEqual(preferences.origin(for: "com.example.a", section: windows), CGPoint(x: 12, y: 34))
+    }
+
+    /// Positions were once stored under the bundle id alone, when there was
+    /// only one panel. Those installs keep their placement.
+    func testPositionsStoredBeforePanelsHadTheirOwnAreStillRead() {
+        defaults.set(["com.example.a": [11.0, 22.0]], forKey: Preferences.Key.originsByApp)
+        let preferences = makePreferences()
+
+        XCTAssertEqual(preferences.origin(for: "com.example.a", section: windows), CGPoint(x: 11, y: 22))
+        XCTAssertNil(
+            preferences.origin(for: "com.example.a", section: workspaces),
+            "they all belonged to the rail of windows"
+        )
     }
 
     func testResettingForgetsEveryPosition() {
         let preferences = makePreferences()
-        preferences.positionMode = .perApp
-        preferences.setOrigin(CGPoint(x: 12, y: 34), for: "com.example.a")
+        preferences.setOrigin(CGPoint(x: 12, y: 34), for: "com.example.a", section: windows)
+        preferences.setOrigin(CGPoint(x: 56, y: 78), for: "com.example.a", section: workspaces)
 
         preferences.resetPositions()
-        XCTAssertNil(preferences.origin(for: "com.example.a"))
+        XCTAssertNil(preferences.origin(for: "com.example.a", section: windows))
+        XCTAssertNil(preferences.origin(for: "com.example.a", section: workspaces))
         XCTAssertNil(preferences.savedOrigin)
-        XCTAssertNil(makePreferences().origin(for: "com.example.a"), "the reset is persisted")
+        XCTAssertNil(makePreferences().origin(for: "com.example.a", section: windows), "the reset is persisted")
     }
 
     func testPositionDefaults() {

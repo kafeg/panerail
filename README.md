@@ -94,9 +94,9 @@ permission state is the first thing the window reports, and it updates live.
 
 Some applications keep their own internal states that matter more than their
 windows. With **Use an app's own states** switched on, in the Advanced tab, the
-rail lists those as a second section, below the windows — not instead of them.
-A browser with a private window open beside a normal one still needs its windows
-switchable.
+rail gives those a panel of their own, alongside the rail of windows — not
+instead of it. A browser with a private window open beside a normal one still
+needs its windows switchable, and each panel remembers where you put it.
 
 It is off by default because it depends on undocumented internals of the app in
 question, which that app's next update may change. Whenever those internals
@@ -111,8 +111,8 @@ They can also appear as a row of glyphs — Vivaldi stores each workspace's icon
 as inline SVG, so those are the real icons:
 
 <div align="center">
-  <img src="docs/sections-light.png" width="290" alt="Windows and workspaces as two sections">
-  <img src="docs/sections-dark.png" width="290" alt="The same rail in dark appearance">
+  <img src="docs/strip-light.png" width="260" alt="Vivaldi workspaces as a row of icons">
+  <img src="docs/strip-dark.png" width="260" alt="The same panel in dark appearance">
 </div>
 
 Names are not shown in that layout: macOS draws tooltips only for the active

@@ -5,87 +5,94 @@ final class RailGeometryTests: XCTestCase {
     private let screen = CGRect(x: 0, y: 0, width: 1440, height: 850)
     private let width: CGFloat = 255
 
-    private func list(_ count: Int, id: String = "windows") -> RailSection {
+    private func list(_ count: Int) -> RailSection {
         RailSection(
-            id: id,
+            id: WindowRailProvider.sectionID,
             title: "Windows",
             items: (0..<count).map { RailItem(id: UInt64($0), title: "w\($0)") }
         )
     }
 
-    private func glyphs(_ count: Int, id: String = "glyphs") -> RailSection {
+    private func glyphs(_ count: Int) -> RailSection {
         RailSection(
-            id: id,
+            id: "glyphs",
             title: "Workspaces",
             layout: .glyphs,
             items: (0..<count).map { RailItem(id: UInt64($0), title: "g\($0)") }
         )
     }
 
-    // MARK: - Panel size
+    // MARK: - The list panel
 
     func testHeightGrowsWithRowCount() {
-        let two = RailGeometry.panelSize(sections: [list(2)], width: width)
-        let five = RailGeometry.panelSize(sections: [list(5)], width: width)
+        let two = RailGeometry.listSize(itemCount: 2, width: width)
+        let five = RailGeometry.listSize(itemCount: 5, width: width)
         XCTAssertEqual(five.height - two.height, RailGeometry.rowHeight * 3, accuracy: 0.001)
     }
 
     func testWidthIsPassedThrough() {
-        XCTAssertEqual(RailGeometry.panelSize(sections: [list(3)], width: 260).width, 260)
+        XCTAssertEqual(RailGeometry.listSize(itemCount: 3, width: 260).width, 260)
     }
 
     /// Beyond the cap the list scrolls, so the panel must stop growing.
     func testHeightIsCappedAtMaxVisibleRows() {
-        let capped = RailGeometry.panelSize(sections: [list(40)], width: width)
-        let atCap = RailGeometry.panelSize(sections: [list(RailGeometry.maxVisibleRows)], width: width)
+        let capped = RailGeometry.listSize(itemCount: 40, width: width)
+        let atCap = RailGeometry.listSize(itemCount: RailGeometry.maxVisibleRows, width: width)
         XCTAssertEqual(capped.height, atCap.height)
     }
 
-    func testAnEmptyRailIsJustItsChrome() {
-        let size = RailGeometry.panelSize(sections: [], width: width)
-        XCTAssertEqual(size.height, RailGeometry.headerHeight + RailGeometry.dividerHeight + RailGeometry.verticalPadding * 2)
+    func testVisibleRowCount() {
+        XCTAssertEqual(RailGeometry.visibleRowCount(for: 0), 0)
+        XCTAssertEqual(RailGeometry.visibleRowCount(for: 3, maxRows: 12), 3)
+        XCTAssertEqual(RailGeometry.visibleRowCount(for: 30, maxRows: 12), 12)
     }
 
-    // MARK: - Several sections
+    // MARK: - The glyph panel
 
-    func testASecondSectionAddsItsRowsATitleAndASeparator() {
-        let one = RailGeometry.panelSize(sections: [list(3)], width: width)
-        let two = RailGeometry.panelSize(sections: [list(3), list(2, id: "other")], width: width)
-
-        // Two rows, a separator, and a title for each of the two sections,
-        // which a single-section rail does not carry.
-        let expected = RailGeometry.rowHeight * 2
-            + RailGeometry.dividerHeight
-            + RailGeometry.sectionTitleHeight * 2
-        XCTAssertEqual(two.height - one.height, expected, accuracy: 0.001)
+    func testTheGlyphPanelGrowsSidewaysAndKeepsItsHeight() {
+        let three = RailGeometry.glyphPanelSize(itemCount: 3)
+        let six = RailGeometry.glyphPanelSize(itemCount: 6)
+        XCTAssertEqual(six.width - three.width, RailGeometry.glyphCellSide * 3, accuracy: 0.001)
+        XCTAssertEqual(three.height, six.height)
+        XCTAssertEqual(three.height, RailGeometry.glyphPanelHeight)
     }
 
-    func testTitlesAppearOnlyWithMoreThanOneSection() {
-        XCTAssertFalse(RailGeometry.showsSectionTitles([list(3)]))
-        XCTAssertTrue(RailGeometry.showsSectionTitles([list(3), glyphs(4)]))
+    /// The grip and the gear both need room of their own, or there is nowhere
+    /// left to grab the panel by.
+    func testTheGlyphPanelLeavesRoomForTheGripAndTheGear() {
+        XCTAssertGreaterThanOrEqual(
+            RailGeometry.glyphPanelSize(itemCount: 0).width,
+            RailGeometry.glyphPanelLeading + RailGeometry.glyphPanelTrailing
+        )
     }
 
-    // MARK: - Glyph sections
-
-    /// Glyphs wrap instead of widening the rail: the width belongs to the list
-    /// sections, and a long row of workspaces must fold rather than overflow.
-    func testGlyphsWrapOntoFurtherRows() {
-        let perRow = Int((width - RailGeometry.contentHorizontalPadding * 2) / RailGeometry.glyphCellSide)
-        XCTAssertGreaterThan(perRow, 1, "the fixture would not exercise wrapping otherwise")
-
-        XCTAssertEqual(RailGeometry.glyphRowCount(itemCount: perRow, width: width), 1)
-        XCTAssertEqual(RailGeometry.glyphRowCount(itemCount: perRow + 1, width: width), 2)
-        XCTAssertEqual(RailGeometry.glyphRowCount(itemCount: 0, width: width), 0)
+    func testTheGlyphPanelStopsGrowingAtItsCap() {
+        let capped = RailGeometry.glyphPanelSize(itemCount: 200)
+        let atCap = RailGeometry.glyphPanelSize(itemCount: RailGeometry.maxVisibleGlyphs)
+        XCTAssertEqual(capped.width, atCap.width)
     }
 
-    func testANarrowRailStillFitsOneGlyphPerRow() {
-        XCTAssertEqual(RailGeometry.glyphRowCount(itemCount: 3, width: 10), 3)
+    /// A panel is sized by the one section it shows.
+    func testSizeFollowsTheSection() {
+        XCTAssertEqual(
+            RailGeometry.size(for: list(4), width: width),
+            RailGeometry.listSize(itemCount: 4, width: width)
+        )
+        let strip = RailGeometry.size(for: glyphs(4), width: width)
+        XCTAssertEqual(strip, RailGeometry.glyphPanelSize(itemCount: 4))
+        XCTAssertGreaterThan(strip.width, strip.height, "the glyph panel is wider than it is tall")
     }
 
-    func testAGlyphSectionIsMeasuredInGlyphRows() {
-        let section = glyphs(3)
-        let height = RailGeometry.sectionHeight(section, width: width, showsTitle: false)
-        XCTAssertEqual(height, RailGeometry.glyphCellSide, accuracy: 0.001)
+    // MARK: - Placement
+
+    /// Two panels opening for the first time must not land on top of each other.
+    func testASecondPanelOpensBelowTheFirst() {
+        let size = CGSize(width: 220, height: 200)
+        let first = RailGeometry.defaultOrigin(size: size, in: screen)
+        let second = RailGeometry.defaultOrigin(size: size, in: screen, stackedBelow: 120)
+
+        XCTAssertEqual(first.x, second.x, "both hug the same edge")
+        XCTAssertEqual(first.y - second.y, 120, accuracy: 0.001)
     }
 
     func testClampLeavesOnScreenOriginAlone() {

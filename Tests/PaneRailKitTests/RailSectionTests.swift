@@ -184,21 +184,13 @@ final class RailSectionTests: XCTestCase {
 
     // MARK: - Layout
 
-    func testASectionCarriesItsOwnLayout() {
+    /// Each section is a panel of its own, so a section carries the shape its
+    /// own panel takes.
+    func testASectionCarriesTheShapeOfItsPanel() {
         let (coordinator, _) = makeCoordinator(windows: ["one", "two"], special: stub(layout: .glyphs))
         coordinator.setFrontmost(app("com.example.browser"))
 
         XCTAssertEqual(coordinator.sections.first?.layout, .list)
         XCTAssertEqual(coordinator.sections.last?.layout, .glyphs)
-    }
-
-    func testTitlesAreOnlyWorthShowingWhenThereIsMoreThanOneSection() {
-        let (coordinator, _) = makeCoordinator(windows: ["one", "two"], special: nil)
-        coordinator.setFrontmost(app("com.example.editor"))
-        XCTAssertFalse(RailGeometry.showsSectionTitles(coordinator.sections))
-
-        let (both, _) = makeCoordinator(windows: ["one", "two"], special: stub())
-        both.setFrontmost(app("com.example.browser"))
-        XCTAssertTrue(RailGeometry.showsSectionTitles(both.sections))
     }
 }

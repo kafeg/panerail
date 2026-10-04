@@ -11,7 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let authorizer = AccessibilityAuthorizer()
     private var monitor: FrontmostAppMonitor?
     private var coordinator: RailCoordinator?
-    private var railController: RailWindowController?
+    private var railPanels: RailPanels?
     private var statusItemController: StatusItemController?
     private var settingsController: SettingsWindowController?
     private var onboardingController: OnboardingWindowController?
@@ -42,7 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         self.coordinator = coordinator
 
-        railController = RailWindowController(
+        railPanels = RailPanels(
             coordinator: coordinator,
             preferences: preferences,
             onOpenSettings: { [weak self] in self?.showSettings() }

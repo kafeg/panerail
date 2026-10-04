@@ -3,13 +3,22 @@ import Combine
 import PaneRailKit
 import SwiftUI
 
-/// Keeps the floating panel's size, position and visibility in sync with the
-/// coordinator's state.
+/// One floating panel, showing one section.
+///
+/// Sections get a panel each rather than sharing one: the rail of windows is
+/// the same object in every application, and an app's own states are a separate
+/// thing to place, size and remember. Each panel keeps its own position.
 final class RailWindowController {
     private let panel = RailPanel()
     private let coordinator: RailCoordinator
     private let preferences: Preferences
+    private let sectionID: String
+    /// How far below the default placement this panel opens, so a second panel
+    /// does not land on top of the first.
+    private let stackOffset: CGFloat
+    private let onOpenSettings: () -> Void
 
+    private var hostingView: FirstMouseHostingView<RailView>?
     private var cancellables = Set<AnyCancellable>()
     private var moveObserver: NSObjectProtocol?
     private var savePositionWork: DispatchWorkItem?
@@ -21,19 +30,20 @@ final class RailWindowController {
     private static let fadeDuration: TimeInterval = 0.12
     private static let positionSaveDelay: TimeInterval = 0.4
 
-    init(coordinator: RailCoordinator, preferences: Preferences, onOpenSettings: @escaping () -> Void) {
+    init(
+        coordinator: RailCoordinator,
+        preferences: Preferences,
+        sectionID: String,
+        stackOffset: CGFloat = 0,
+        onOpenSettings: @escaping () -> Void
+    ) {
         self.coordinator = coordinator
         self.preferences = preferences
+        self.sectionID = sectionID
+        self.stackOffset = stackOffset
+        self.onOpenSettings = onOpenSettings
 
-        let rootView = RailView(
-            coordinator: coordinator,
-            preferences: preferences,
-            onOpenSettings: onOpenSettings,
-            onSelect: { [weak coordinator] item in coordinator?.select(item) }
-        )
-        panel.contentView = FirstMouseHostingView(rootView: rootView)
-
-        // Several things move or resize the panel, and by the time these are
+        // Several things move or resize a panel, and by the time these are
         // delivered on the run loop the properties behind them have settled —
         // so the handler reads current state instead of juggling combinators.
         let triggers: [AnyPublisher<Void, Never>] = [
@@ -51,6 +61,9 @@ final class RailWindowController {
             .sink { [weak self] in self?.apply() }
             .store(in: &cancellables)
 
+        // `queue: nil` keeps delivery synchronous. With a queue the block would
+        // run after `apply` has already cleared `isAdjustingFrame`, and the
+        // default placement would be persisted as if the user had chosen it.
         moveObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didMoveNotification,
             object: panel,
@@ -66,15 +79,40 @@ final class RailWindowController {
         }
     }
 
-    private func apply() {
-        let sections = coordinator.sections
-        let size = RailGeometry.panelSize(sections: sections, width: CGFloat(preferences.width))
+    private var section: RailSection? {
+        coordinator.sections.first { $0.id == sectionID }
+    }
 
+    private func apply() {
+        guard coordinator.isVisible, let section else {
+            setVisible(false)
+            return
+        }
+
+        let rail = RailView(
+            coordinator: coordinator,
+            preferences: preferences,
+            section: section,
+            onOpenSettings: onOpenSettings,
+            onSelect: { [weak coordinator] item in coordinator?.select(item) }
+        )
+
+        // The section is a value, so the hosted view has to be handed the new
+        // one rather than left to notice.
+        if let hostingView {
+            hostingView.rootView = rail
+        } else {
+            let view = FirstMouseHostingView(rootView: rail)
+            panel.contentView = view
+            hostingView = view
+        }
+
+        let size = RailGeometry.size(for: section, width: CGFloat(preferences.width))
         isAdjustingFrame = true
         panel.setFrame(targetFrame(for: size), display: true)
         isAdjustingFrame = false
 
-        setVisible(coordinator.isVisible && !sections.isEmpty)
+        setVisible(true)
     }
 
     private func setVisible(_ visible: Bool) {
@@ -100,10 +138,10 @@ final class RailWindowController {
         }
     }
 
-    /// The saved anchor is the panel's top-left corner, so the rail grows
-    /// downwards as windows appear instead of drifting off the top of the screen.
+    /// The saved anchor is the panel's top-left corner, so it grows downwards
+    /// as rows appear instead of drifting off the top of the screen.
     private func targetFrame(for size: CGSize) -> CGRect {
-        let anchor = preferences.origin(for: coordinator.app?.bundleIdentifier)
+        let anchor = preferences.origin(for: coordinator.app?.bundleIdentifier, section: sectionID)
         let screen = anchor.flatMap { point in
             NSScreen.screens.first { $0.frame.contains(point) }
         } ?? NSScreen.main ?? NSScreen.screens.first
@@ -116,7 +154,11 @@ final class RailWindowController {
         if let anchor {
             proposed = CGPoint(x: anchor.x, y: anchor.y - size.height)
         } else {
-            proposed = RailGeometry.defaultOrigin(size: size, in: visibleFrame)
+            proposed = RailGeometry.defaultOrigin(
+                size: size,
+                in: visibleFrame,
+                stackedBelow: stackOffset
+            )
         }
 
         return CGRect(
@@ -131,8 +173,13 @@ final class RailWindowController {
 
         let frame = panel.frame
         let bundleID = coordinator.app?.bundleIdentifier
+        let section = sectionID
         let work = DispatchWorkItem { [weak self] in
-            self?.preferences.setOrigin(CGPoint(x: frame.minX, y: frame.maxY), for: bundleID)
+            self?.preferences.setOrigin(
+                CGPoint(x: frame.minX, y: frame.maxY),
+                for: bundleID,
+                section: section
+            )
         }
         savePositionWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.positionSaveDelay, execute: work)

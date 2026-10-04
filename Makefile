@@ -58,14 +58,14 @@ preview: build
 	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-settings docs/settings-dark.png --dark
 	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-settings docs/advanced-light.png --advanced
 	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-settings docs/advanced-dark.png --advanced --dark
-	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-sections docs/sections-light.png
-	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-sections docs/sections-dark.png --dark
+	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-glyphs docs/strip-light.png
+	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-glyphs docs/strip-dark.png --dark
 	@rm -f default.profraw
 
 preview-rail: install
-	open -n /Applications/PaneRail.app --args --render-live $(APP_ID) docs/rail-light.png
+	open -n /Applications/PaneRail.app --args --render-live $(APP_ID) $(CURDIR)/docs/rail-light.png
 	sleep 6
-	open -n /Applications/PaneRail.app --args --render-live $(APP_ID) docs/rail-dark.png --dark
+	open -n /Applications/PaneRail.app --args --render-live $(APP_ID) $(CURDIR)/docs/rail-dark.png --dark
 	sleep 6
 
 icons:

@@ -10,7 +10,7 @@ import PaneRailKit
 enum PreferencesDiagnostics {
     static func dump(_ preferences: Preferences) -> String {
         let origin = preferences.savedOrigin.map { "\(Int($0.x)),\(Int($0.y))" } ?? "none"
-        let perApp = preferences.origin(for: "com.example.one")
+        let perApp = preferences.origin(for: "com.example.one", section: WindowRailProvider.sectionID)
             .map { "\(Int($0.x)),\(Int($0.y))" } ?? "none"
         return """
         isEnabled=\(preferences.isEnabled)
@@ -39,6 +39,6 @@ enum PreferencesDiagnostics {
         preferences.positionMode = .perApp
         preferences.vivaldiIconStrip = true
         preferences.width = 310
-        preferences.setOrigin(CGPoint(x: 321, y: 654), for: "com.example.one")
+        preferences.setOrigin(CGPoint(x: 321, y: 654), for: "com.example.one", section: WindowRailProvider.sectionID)
     }
 }

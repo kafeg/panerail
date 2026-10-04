@@ -15,19 +15,21 @@ enum PreviewRenderer {
         let coordinator = RailCoordinator(source: DemoData.makeSource(), preferences: preferences)
         coordinator.setFrontmost(DemoData.app)
 
-        let railSize = RailGeometry.panelSize(
-            sections: coordinator.sections,
-            width: CGFloat(preferences.width)
-        )
-
+        guard let section = coordinator.sections.first else { return false }
         let rail = RailView(
             coordinator: coordinator,
             preferences: preferences,
+            section: section,
             onOpenSettings: {},
             onSelect: { _ in }
         )
 
-        return draw(rail: rail, size: railSize, dark: dark, to: path)
+        return draw(
+            rail: rail,
+            size: RailGeometry.size(for: section, width: CGFloat(preferences.width)),
+            dark: dark,
+            to: path
+        )
     }
 
     private static func draw(rail: RailView, size: CGSize, dark: Bool, to path: String) -> Bool {
@@ -65,15 +67,21 @@ enum PreviewRenderer {
         dark: Bool,
         iconStrip: Bool = false
     ) -> Bool {
-        guard AccessibilityAuthorizer.isProcessTrusted else {
-            print("no accessibility permission")
+        // Launched through `open`, so stdout goes nowhere: a failure has to
+        // leave its reason somewhere the caller can read it.
+        func fail(_ reason: String) -> Bool {
+            try? reason.write(toFile: path + ".error.txt", atomically: true, encoding: .utf8)
+            print(reason)
             return false
+        }
+
+        guard AccessibilityAuthorizer.isProcessTrusted else {
+            return fail("no accessibility permission")
         }
         guard let running = NSWorkspace.shared.runningApplications.first(where: {
             $0.bundleIdentifier == bundleIdentifier
         }), let app = FrontmostApp(running: running) else {
-            print("\(bundleIdentifier) is not running")
-            return false
+            return fail("\(bundleIdentifier) is not running")
         }
 
         let suite = UserDefaults(suiteName: "dev.kafeg.panerail.preview") ?? .standard
@@ -87,31 +95,32 @@ enum PreviewRenderer {
             preferences: preferences
         )
         coordinator.setFrontmost(app)
-        guard !coordinator.sections.isEmpty else {
-            print("\(app.name) has no windows to show")
-            return false
+
+        // Each panel shows one section, so a render picks the one asked for:
+        // the glyphs when that is what is being illustrated, the windows
+        // otherwise.
+        let wanted = iconStrip ? coordinator.sections.last : coordinator.sections.first
+        guard let section = wanted else {
+            return fail("\(app.name) produced no sections (visible=\(coordinator.isVisible))")
         }
 
         return draw(
             rail: RailView(
                 coordinator: coordinator,
                 preferences: preferences,
+                section: section,
                 onOpenSettings: {},
                 onSelect: { _ in }
             ),
-            size: RailGeometry.panelSize(
-                sections: coordinator.sections,
-                width: CGFloat(preferences.width)
-            ),
+            size: RailGeometry.size(for: section, width: CGFloat(preferences.width)),
             dark: dark,
             to: path
         )
     }
 
-    /// Renders a rail with two sections — windows and an app's own states —
-    /// which no other preview can reach: it depends on how many windows the
-    /// front app happens to have.
-    static func renderSections(to path: String, dark: Bool) -> Bool {
+    /// Renders the glyph panel, which no other preview can reach: its shape is
+    /// chosen by a provider, not by a setting the renderer could flip.
+    static func renderGlyphs(to path: String, dark: Bool) -> Bool {
         let suite = UserDefaults(suiteName: "dev.kafeg.panerail.preview") ?? .standard
         suite.removePersistentDomain(forName: "dev.kafeg.panerail.preview")
         let preferences = Preferences(defaults: suite)
@@ -124,18 +133,17 @@ enum PreviewRenderer {
             preferences: preferences
         )
         coordinator.setFrontmost(DemoData.app)
+        guard let section = coordinator.sections.last else { return false }
 
         return draw(
             rail: RailView(
                 coordinator: coordinator,
                 preferences: preferences,
+                section: section,
                 onOpenSettings: {},
                 onSelect: { _ in }
             ),
-            size: RailGeometry.panelSize(
-                sections: coordinator.sections,
-                width: CGFloat(preferences.width)
-            ),
+            size: RailGeometry.size(for: section, width: CGFloat(preferences.width)),
             dark: dark,
             to: path
         )

@@ -40,6 +40,7 @@ public final class Preferences: ObservableObject {
         static let hidesInFullScreen = "rail.hidesInFullScreen"
         static let positionMode = "rail.positionMode"
         static let originsByApp = "rail.originsByApp"
+        static let sharedOrigins = "rail.sharedOrigins"
         static let vivaldiIconStrip = "rail.vivaldi.iconStrip"
         static let width = "rail.width"
         static let originX = "rail.originX"
@@ -177,15 +178,19 @@ public final class Preferences: ObservableObject {
         isListed(bundleID) ? removeListed(bundleID) : addListed(bundleID)
     }
 
-    // MARK: - Panel position
+    // MARK: - Panel positions
 
-    /// `nil` until the user drags the rail somewhere, which is the signal to
-    /// fall back to the default placement.
+    /// Each panel remembers its own place. The rail of windows and the panel of
+    /// an app's own states are separate objects on screen, so one being dragged
+    /// says nothing about where the other belongs.
     ///
-    /// Used as the one position in shared mode. Per-application mode keeps its
-    /// own entries and deliberately does not fall back to this: inheriting some
-    /// other application's placement puts the rail somewhere the user never
-    /// chose for the app they are looking at.
+    /// Positions are keyed by the section a panel shows, which is the only
+    /// identity a panel has.
+
+    /// The shared position of the main rail.
+    ///
+    /// Kept as its own pair of keys because that is where it has always lived;
+    /// installs that predate per-panel positions keep their placement.
     public var savedOrigin: CGPoint? {
         get { point(forKey: Key.originX, Key.originY) }
         set {
@@ -194,34 +199,67 @@ public final class Preferences: ObservableObject {
         }
     }
 
-    /// Where the rail should open for the given application.
-    public func origin(for bundleIdentifier: String?) -> CGPoint? {
+    /// Where the given panel should open for the given application.
+    public func origin(for bundleIdentifier: String?, section: String) -> CGPoint? {
         switch positionMode {
         case .shared:
-            return savedOrigin
+            return sharedOrigin(section: section)
         case .perApp:
             guard let bundleIdentifier else { return nil }
-            return originsByApp[bundleIdentifier]
+            let origins = originsByApp
+            if let stored = origins[key(section: section, bundleIdentifier: bundleIdentifier)] {
+                return stored
+            }
+            // Before panels had their own positions these were keyed by bundle
+            // id alone, and they all belonged to the rail of windows.
+            guard section == WindowRailProvider.sectionID else { return nil }
+            return origins[bundleIdentifier]
         }
     }
 
-    /// Records where the user dropped the rail.
+    /// Records where the user dropped a panel.
     ///
     /// The shared position is updated in both modes, so switching to shared
-    /// mode lands the rail where it was last dropped rather than at the edge.
-    public func setOrigin(_ origin: CGPoint, for bundleIdentifier: String?) {
+    /// mode lands each panel where it was last dropped rather than at the edge.
+    public func setOrigin(_ origin: CGPoint, for bundleIdentifier: String?, section: String) {
         if positionMode == .perApp, let bundleIdentifier {
             var origins = originsByApp
-            origins[bundleIdentifier] = origin
+            origins[key(section: section, bundleIdentifier: bundleIdentifier)] = origin
             writeOriginsByApp(origins)
         }
-        savedOrigin = origin
+        setSharedOrigin(origin, section: section)
     }
 
-    /// Forgets every stored position, so the rail returns to its default place.
+    /// Forgets every stored position, so every panel returns to its default.
     public func resetPositions() {
         writeOriginsByApp([:])
+        defaults.removeObject(forKey: Key.sharedOrigins)
         savedOrigin = nil
+    }
+
+    private func key(section: String, bundleIdentifier: String) -> String {
+        "\(section)\u{1}\(bundleIdentifier)"
+    }
+
+    private func sharedOrigin(section: String) -> CGPoint? {
+        guard section != WindowRailProvider.sectionID else { return savedOrigin }
+        guard let pair = sharedOrigins[section], pair.count == 2 else { return nil }
+        return CGPoint(x: pair[0], y: pair[1])
+    }
+
+    private func setSharedOrigin(_ origin: CGPoint, section: String) {
+        guard section != WindowRailProvider.sectionID else {
+            savedOrigin = origin
+            return
+        }
+        var origins = sharedOrigins
+        origins[section] = [Double(origin.x), Double(origin.y)]
+        defaults.set(origins, forKey: Key.sharedOrigins)
+        positionRevision &+= 1
+    }
+
+    private var sharedOrigins: [String: [Double]] {
+        defaults.dictionary(forKey: Key.sharedOrigins) as? [String: [Double]] ?? [:]
     }
 
     private var originsByApp: [String: CGPoint] {

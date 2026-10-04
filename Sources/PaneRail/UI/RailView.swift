@@ -1,24 +1,38 @@
 import PaneRailKit
 import SwiftUI
 
+/// One floating panel's worth of rail: a single section, drawn as a list of
+/// titles or as a row of glyphs.
+///
+/// Sections live in separate panels rather than stacked in one, so the rail of
+/// windows stays exactly what it is for every application while an app's own
+/// states get their own object to place and keep.
 struct RailView: View {
     @ObservedObject var coordinator: RailCoordinator
     @ObservedObject var preferences: Preferences
+    let section: RailSection
     let onOpenSettings: () -> Void
     let onSelect: (RailItem) -> Void
 
     @State private var hoveredID: RailItemID?
     @State private var isHoveringSettings = false
+    @State private var isHoveringGrip = false
 
     private let cornerRadius: CGFloat = 10
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider().opacity(0.4)
-            content
+        Group {
+            if section.layout == .glyphs {
+                glyphPanel
+            } else {
+                VStack(spacing: 0) {
+                    header
+                    Divider().opacity(0.4)
+                    list
+                }
+                .frame(width: preferences.width)
+            }
         }
-        .frame(width: preferences.width)
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
@@ -60,14 +74,94 @@ struct RailView: View {
         .background(WindowDragHandle())
     }
 
-    private var content: some View {
+    /// The handle for the glyph panel, which has no header to grab.
+    ///
+    /// The drag surface sits *above* the dots rather than behind them: a
+    /// SwiftUI view with a content shape swallows the mouse-down, so a handle
+    /// placed in the background never sees the click that would start the drag.
+    private var glyphPanelGrip: some View {
+        ZStack {
+            // Drawn rather than an SF Symbol: the obvious symbol names for a
+            // grip do not all exist, and a missing one renders as nothing.
+            HStack(spacing: 3) {
+                ForEach(0..<2, id: \.self) { _ in
+                    VStack(spacing: 3) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            Circle().frame(width: 2, height: 2)
+                        }
+                    }
+                }
+            }
+            .foregroundStyle(Color.secondary)
+            .opacity(isHoveringGrip ? 0.95 : 0.5)
+
+            WindowDragHandle()
+        }
+        .frame(width: RailGeometry.glyphPanelLeading, height: RailGeometry.glyphPanelHeight)
+        .onHover { isHoveringGrip = $0 }
+        .help("Drag to move")
+    }
+
+    /// The glyph panel: icons only, no titles.
+    private var glyphPanel: some View {
+        HStack(spacing: 0) {
+            glyphPanelGrip
+
+            ForEach(section.items) { item in
+                glyphCell(for: item)
+            }
+
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 9))
+                .foregroundStyle(Color.secondary)
+                .opacity(isHoveringSettings ? 1 : 0.6)
+                .frame(width: RailGeometry.glyphPanelTrailing, height: RailGeometry.glyphPanelHeight)
+                .contentShape(Rectangle())
+                .onHover { isHoveringSettings = $0 }
+                .onTapGesture(perform: onOpenSettings)
+                .help("PaneRail settings")
+        }
+        .padding(.horizontal, RailGeometry.glyphPanelPadding)
+        .frame(height: RailGeometry.glyphPanelHeight)
+        .background(WindowDragHandle())
+    }
+
+    private func glyphCell(for item: RailItem) -> some View {
+        let isHovered = hoveredID == item.id
+
+        return marker(for: item, side: 15)
+            .frame(width: RailGeometry.glyphCellSide, height: RailGeometry.glyphPanelHeight)
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(isHovered ? Color.primary.opacity(0.12) : Color.clear)
+                    .padding(2)
+            )
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                if hovering {
+                    hoveredID = item.id
+                } else if hoveredID == item.id {
+                    hoveredID = nil
+                }
+            }
+            .onTapGesture { onSelect(item) }
+            // Only ever seen while PaneRail happens to be the active app,
+            // such as when its settings window is open: macOS does not draw
+            // tooltips for an inactive one, and the rail is inactive by design.
+            .help(item.title)
+    }
+
+    /// One column width for every row, so titles line up whether the provider
+    /// supplies glyphs or only the plain marker.
+    private var markerWidth: CGFloat {
+        section.items.contains { $0.iconSVG != nil } ? 14 : 5
+    }
+
+    private var list: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 0) {
-                ForEach(Array(coordinator.sections.enumerated()), id: \.element.id) { index, section in
-                    if index > 0 {
-                        Divider().opacity(0.35).padding(.vertical, 2)
-                    }
-                    sectionView(section)
+                ForEach(section.items) { item in
+                    row(for: item)
                 }
             }
         }
@@ -76,91 +170,37 @@ struct RailView: View {
     }
 
     @ViewBuilder
-    private func sectionView(_ section: RailSection) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if showsSectionTitles {
-                Text(section.title.uppercased())
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(Color.secondary)
-                    .padding(.horizontal, 10)
-                    .frame(height: RailGeometry.sectionTitleHeight, alignment: .leading)
-            }
-
-            switch section.layout {
-            case .list:
-                ForEach(section.items) { row(for: $0, in: section) }
-            case .glyphs:
-                glyphRows(of: section)
-            }
+    private func marker(for item: RailItem, side: CGFloat = 13) -> some View {
+        if let svg = item.iconSVG, let icon = SVGIconRenderer.shared.image(svg: svg, side: side) {
+            Image(nsImage: icon)
+                .renderingMode(.template)
+                .foregroundStyle(item.isActive ? Color.accentColor : Color.secondary)
+        } else {
+            // A row with no glyph still has to be identifiable in the strip,
+            // so it falls back to the first letter of its name.
+            Text(item.title.prefix(1).uppercased())
+                .font(.system(size: side * 0.72, weight: .medium))
+                .foregroundStyle(item.isActive ? Color.accentColor : Color.secondary)
         }
     }
 
-    private var showsSectionTitles: Bool {
-        RailGeometry.showsSectionTitles(coordinator.sections)
-    }
-
-    // MARK: - Glyph sections
-
-    /// Columns are computed the same way `RailGeometry` computes them, so the
-    /// panel's height and what is drawn into it cannot disagree.
-    private var glyphColumns: Int {
-        let available = max(
-            CGFloat(preferences.width) - RailGeometry.contentHorizontalPadding * 2,
-            RailGeometry.glyphCellSide
-        )
-        return max(1, Int(available / RailGeometry.glyphCellSide))
-    }
-
-    private func glyphRows(of section: RailSection) -> some View {
-        let columns = glyphColumns
-        let rows = stride(from: 0, to: section.items.count, by: columns).map { start in
-            Array(section.items[start..<min(start + columns, section.items.count)])
+    @ViewBuilder
+    private func listMarker(for item: RailItem) -> some View {
+        if item.iconSVG != nil {
+            marker(for: item)
+        } else {
+            Circle()
+                .fill(item.isActive ? Color.accentColor : Color.secondary.opacity(0.4))
+                .frame(width: 5, height: 5)
         }
-
-        return VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, items in
-                HStack(spacing: 0) {
-                    ForEach(items) { glyphCell(for: $0) }
-                    Spacer(minLength: 0)
-                }
-            }
-        }
-        .padding(.horizontal, RailGeometry.contentHorizontalPadding)
     }
 
-    private func glyphCell(for item: RailItem) -> some View {
-        let isHovered = hoveredID == item.id
-
-        return marker(for: item, side: 15)
-            .frame(width: RailGeometry.glyphCellSide, height: RailGeometry.glyphCellSide)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(isHovered ? Color.primary.opacity(0.12) : Color.clear)
-                    .padding(2)
-            )
-            .contentShape(Rectangle())
-            .onHover { hovering in setHover(hovering, item) }
-            .onTapGesture { onSelect(item) }
-            // Only ever seen while PaneRail happens to be the active app, such
-            // as when its settings window is open: macOS does not draw tooltips
-            // for an inactive one, and the rail is inactive by design.
-            .help(item.title)
-    }
-
-    // MARK: - List sections
-
-    /// One column width for every row in a section, so titles line up whether
-    /// or not its provider supplies glyphs.
-    private func markerWidth(in section: RailSection) -> CGFloat {
-        section.items.contains { $0.iconSVG != nil } ? 14 : 5
-    }
-
-    private func row(for item: RailItem, in section: RailSection) -> some View {
+    private func row(for item: RailItem) -> some View {
         let isHovered = hoveredID == item.id
 
         return HStack(spacing: 7) {
             listMarker(for: item)
-                .frame(width: markerWidth(in: section), height: 14)
+                .frame(width: markerWidth, height: 14)
 
             Text(item.title)
                 .font(.system(size: 11.5))
@@ -184,44 +224,14 @@ struct RailView: View {
                 .padding(.horizontal, 4)
         )
         .contentShape(Rectangle())
-        .onHover { hovering in setHover(hovering, item) }
+        .onHover { hovering in
+            if hovering {
+                hoveredID = item.id
+            } else if hoveredID == item.id {
+                hoveredID = nil
+            }
+        }
         .onTapGesture { onSelect(item) }
         .help(item.title)
-    }
-
-    // MARK: - Shared
-
-    private func setHover(_ hovering: Bool, _ item: RailItem) {
-        if hovering {
-            hoveredID = item.id
-        } else if hoveredID == item.id {
-            hoveredID = nil
-        }
-    }
-
-    @ViewBuilder
-    private func marker(for item: RailItem, side: CGFloat = 13) -> some View {
-        if let svg = item.iconSVG, let icon = SVGIconRenderer.shared.image(svg: svg, side: side) {
-            Image(nsImage: icon)
-                .renderingMode(.template)
-                .foregroundStyle(item.isActive ? Color.accentColor : Color.secondary)
-        } else {
-            // A row with no glyph still has to be identifiable, so it falls
-            // back to the first letter of its name.
-            Text(item.title.prefix(1).uppercased())
-                .font(.system(size: side * 0.72, weight: .medium))
-                .foregroundStyle(item.isActive ? Color.accentColor : Color.secondary)
-        }
-    }
-
-    @ViewBuilder
-    private func listMarker(for item: RailItem) -> some View {
-        if item.iconSVG != nil {
-            marker(for: item)
-        } else {
-            Circle()
-                .fill(item.isActive ? Color.accentColor : Color.secondary.opacity(0.4))
-                .frame(width: 5, height: 5)
-        }
     }
 }
