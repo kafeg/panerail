@@ -48,6 +48,18 @@ mistyped render flag hung a command for ten minutes. Check the flag exists in
 white unless the renderer supplies a backdrop. If a dark render looks broken,
 suspect the harness before the view.
 
+**An app launched through `open` does not inherit the working directory.** A
+relative output path writes somewhere else, or nowhere, and the render looks
+like it silently failed. Pass absolute paths — `$(CURDIR)` in the Makefile.
+For the same reason a diagnostic launched this way must write its *failure* to a
+file too: its stdout goes nowhere, so a silent return is all the caller sees.
+
+**zsh does not word-split unquoted variables, unlike bash.** Building an
+argument list in a variable and passing it as `$args` hands the whole string
+over as one argument. Here that produced files named `strip-dark.png --strip
+--dark` and ten minutes spent looking for a bug in the app. Pass arguments
+literally, or use `${=args}`.
+
 **A missing SF Symbol draws nothing at all.** `Image(systemName:)` fails
 silently for a name that does not exist — `line.3.vertical` is one. If part of a
 view is simply absent, check the symbol name exists before debugging layout.

@@ -52,6 +52,28 @@ the existing instance. Kill it first, and use `-n`.
 Output goes nowhere when launched this way, so any diagnostic flag must write
 its report to a file passed as an argument.
 
+## A stable signature is not enough on its own
+
+The certificate stops the *requirement* changing. It does nothing about entries
+TCC is already holding: installs made before `make install` existed — the ones
+that deleted the bundle first — leave dead rows behind, and the list shows no
+sign of which is which.
+
+The symptom is confusing, because every obvious check passes:
+
+```sh
+security find-identity -v -p codesigning     # the identity is there
+codesign -d -r- /Applications/PaneRail.app   # certificate-based, as it should be
+```
+
+and the app still reports no permission, while the switch in System Settings
+looks on. Three dead rows accumulated here before the cause was understood, and
+turning one of them on achieves nothing.
+
+So when the app says it has no access, do not go looking at the signature first.
+Reset, relaunch, and have the user enable the single fresh row — and remove any
+others with **−** so the next grant cannot land on a corpse.
+
 ## When the grant is genuinely gone
 
 ```sh
