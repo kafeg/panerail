@@ -5,6 +5,21 @@ description: Make a PaneRail release. Use when you must tag, publish or ship a v
 
 # Make a release
 
+## Release only a change in behaviour
+
+Ask one question: does a user see a difference?
+
+Release when the answer is yes. Do not release a change to documentation, to
+skills or to the build tooling. Keep those for the next release that changes
+behaviour.
+
+A release that a user cannot tell apart from the previous one is noise. It also
+makes the list of releases harder to read later, when somebody needs to know
+which version brought which change.
+
+The main branch always holds the latest work. Anyone who needs it can build from
+source.
+
 ## The version is calculated
 
 The format is `<major>.<minor>.<commits>`. You choose the first two numbers in
