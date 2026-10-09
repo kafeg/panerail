@@ -7,6 +7,7 @@ switch. Accessory app, no Dock icon, non-activating panel.
 - Building and releasing: `docs/BUILDING.md`
 - Skills: `add-setting`, `add-provider`, `visual-check`, `release`,
   `permissions`, `probe-app-internals`
+- Branches: `main` only; commit and push straight to `main`.
 
 ## Rules
 
