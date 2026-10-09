@@ -5,8 +5,8 @@ switch. Accessory app, no Dock icon, non-activating panel.
 
 - Architecture: `docs/ARCHITECTURE.md`
 - Building and releasing: `docs/BUILDING.md`
-- Skills: `add-setting`, `visual-check`, `release`, `permissions`,
-  `probe-app-internals`
+- Skills: `add-setting`, `add-provider`, `visual-check`, `release`,
+  `permissions`, `probe-app-internals`
 
 ## Rules
 

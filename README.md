@@ -87,7 +87,7 @@ permission state is the first thing the window reports, and it updates live.
 | Appear from *n* windows | The rail stays hidden below this many windows. Set it to 1 to always show it |
 | Hide in full screen | Gets out of the way while a window fills the screen |
 | Width | 160–380 pt |
-| Position | Remembered per application, or one position for everything. An application the rail has not been placed for opens in the top right corner |
+| Position | Remembered per application, or one position for everything. Each panel keeps its own place; one that has never been placed opens in the top right corner |
 | Launch at login | Registers a login item via `SMAppService` |
 
 ## App-specific states (experimental)

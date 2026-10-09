@@ -1,63 +1,66 @@
 ---
 name: probe-app-internals
-description: Investigate another application's internal state for a rail provider. Use before adding support for an app's own states, or when existing support stops working - this touches the user's live applications and has broken one of them before.
+description: Investigate another application's internal state. Use before you support an app's own states, or when existing support stops working. This touches the user's live applications and has broken one of them.
 ---
 
-# Probing another application
+# Investigate another application
 
-Everything a provider knows about another app is undocumented and discovered by
-experiment. The experiments run against the user's real, running applications,
-so the order below is about doing the least damage first.
+A provider knows nothing about another application until you find it out by
+experiment. The experiments run against the user's real applications. Do the
+least damaging step first.
 
-## Look on disk before touching the app
+## 1. Read the disk first
 
-Chromium-based apps keep a great deal in a profile JSON. Vivaldi's workspace
-list, including each workspace's icon as inline SVG, lives in
+Chromium applications keep much of their state in a profile JSON file. Vivaldi
+keeps the workspace list, with each icon as inline SVG, in
 `~/Library/Application Support/<App>/Default/Preferences`.
 
-Reading a file changes nothing and can be done freely. Do it first, and print
-only structure — key names, types, counts. Titles, names and URLs in there are
-the user's data.
+A file read changes nothing. Do it first.
 
-## Then the accessibility tree, read-only
+Print the structure only: key names, types and counts. The titles, names and
+URLs in that file are the user's data.
 
-Add a probe flag to the app rather than driving the target from a shell: the
-probe inherits the Accessibility grant, a shell command does not. See
-`VivaldiProbe` and the `permissions` skill for how to launch it.
+## 2. Then read the accessibility tree
 
-Report matches **by index, not by value** — "workspace #3" rather than its name.
-The probe already reads the list from disk, so matching by name and printing the
-position tells you everything without putting the user's data in a log.
+Put the probe in the application. Do not drive the target from a shell. The
+probe gets the Accessibility grant. A shell command does not. See the
+`permissions` skill for how to start it.
 
-## Never open the target's menus programmatically
+Report each match by index, not by value. Write "workspace #3", not its name.
+The probe already has the list from the disk, so an index identifies the match
+and keeps the user's data out of the log.
 
-An open macOS menu grabs all input. A probe that pressed a menu item and left
-the menu open made the browser stop responding to clicks entirely, and looked
-like a crash. If a menu must be inspected, read its items through the
-accessibility tree without opening it.
+## 3. Never open the target's menus
 
-## Do not trust state that updates lazily
+An open macOS menu takes all input. A probe pressed a menu item, left the menu
+open, and the browser stopped answering clicks. It looked like a crash.
 
-Chromium rebuilds its menus only when they are shown. Reading a menu right after
-a switch reports the *previous* state, which twice convinced me a working
-mechanism was broken.
+Read menu items through the accessibility tree. Do not open the menu.
 
-When a check disagrees with what should have happened, suspect the check.
-The cheapest way to settle it: send one action and ask the user what they saw.
-That resolved in one round what two hours of automated verification had got
+## Do not trust state that updates late
+
+Chromium builds its menus again only when it shows them. A menu read just after
+a switch reports the previous state. This made a working mechanism look broken,
+twice.
+
+Suspect your check when the check disagrees with the expected result.
+
+The cheapest way to settle the question: send one action, then ask the user what
+they saw. This answered in one exchange what two hours of automated checks got
 wrong.
 
-## Expect the obvious approach to fail silently
+## Expect silent failure
 
-On Vivaldi, `AXPress` on a workspace menu item returns success and does nothing,
-because the item is not wired up until its menu opens. Synthesised modifiers set
-as flags on a key event are ignored by Chromium; they have to be sent as real
-key-down and key-up events. Neither failure reports an error.
+`AXPress` on a Vivaldi workspace menu item returns success and does nothing. The
+item has no action until its menu opens.
 
-Verify by effect, never by return value.
+Chromium ignores a modifier that is only a flag on a key event. Send the
+modifier as a real key-down and key-up event.
 
-## Fail soft, and say so
+Neither failure reports an error. Verify by effect, never by return value.
 
-Any provider built on this must fall back to plain window switching when its
-assumptions stop holding — and must report why, the way the Advanced tab reports
-the profile read. A silent fallback is indistinguishable from a broken app.
+## Report the outcome
+
+A provider built on this must return to plain window switching when its
+assumptions fail. It must also report the reason, as the Advanced tab reports
+the profile read. A silent fallback looks the same as a broken application.

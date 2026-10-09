@@ -1,56 +1,55 @@
 ---
 name: release
-description: Cut a PaneRail release. Use when asked to tag, publish or ship a version - the version number is computed, not chosen, and the published artifact must be checked rather than assumed.
+description: Make a PaneRail release. Use when you must tag, publish or ship a version. The version comes from the commit count. Check the published archive.
 ---
 
-# Releasing
+# Make a release
 
-## The version is computed
+## The version is calculated
 
-`<major>.<minor>.<commits>`. Only the first two are chosen by hand, in
-`project.yml`; the last is `git rev-list --count HEAD`, stamped into the built
-`Info.plist` by `Scripts/stamp-version.sh`.
+The format is `<major>.<minor>.<commits>`. You choose the first two numbers in
+`project.yml`. `Scripts/stamp-version.sh` writes the commit count into the
+built `Info.plist`.
 
-So the tag name follows the build, not the other way round:
+The tag name follows the build:
 
 ```sh
-make version        # e.g. 0.1.23 — tag exactly this, prefixed with v
+make version        # for example 0.1.23 — use this name, with a v in front
 ```
 
-**Read it after the last commit, not before.** Committing bumps the count, so a
-number noted earlier is already stale. Tagging the stale one produces a release
-whose contents disagree with its name; the workflow warns, but the release is
-already published by then.
+Read the version after the last commit. Each commit increases the count. A
+number from before the commit is already wrong. A wrong tag gives a release
+whose contents disagree with its name.
 
-## Cutting it
+## Make the tag
 
 ```sh
-git tag -a "v$(make version)" -m "..."   # what changed, plus the Gatekeeper note
+git tag -a "v$(make version)" -m "..."
 git push origin "v$(make version)"
 ```
 
-The tag message becomes part of the release notes. Say what changed for a user,
-and keep the line about the first launch being blocked while builds are not
-notarised.
+The message becomes part of the release notes. Write what changed for a user.
+Keep the sentence about the blocked first launch while builds have no
+notarisation.
 
-## Verifying — do not skip this
+## Check the result
 
-Wait for the workflow, then **download the published archive and look inside**:
+Wait for the workflow. Then download the archive and look inside it:
 
 ```sh
 curl -s "https://api.github.com/repos/kafeg/panerail/releases/tags/vX.Y.Z" \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['assets'][0]['browser_download_url'])"
-# download, unzip, then:
+# download the file, unzip it, then:
 /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" PaneRail.app/Contents/Info.plist
 ```
 
-The version inside the bundle must equal the tag. This one check catches a
-stale tag, a shallow clone miscounting commits, and a workflow that published
-the wrong build — all three have been possible here at some point.
+The version in the bundle must equal the tag. This check finds a stale tag, a
+shallow clone with a wrong commit count, and a workflow that published the wrong
+build.
 
 ## Signing
 
-Signing and notarisation are already written into `.github/workflows/release.yml`
-and switch on by themselves once the repository secrets exist; without them the
-build is ad-hoc and the release notes gain the "Open Anyway" instructions
-automatically. Nothing to do at release time either way.
+`.github/workflows/release.yml` contains the signing and notarisation steps.
+They start when the repository secrets exist. Without the secrets the build is
+ad-hoc, and the release notes get the "Open Anyway" instructions. You do nothing
+at release time in either case.

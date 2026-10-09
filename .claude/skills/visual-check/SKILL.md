@@ -1,75 +1,69 @@
 ---
 name: visual-check
-description: Look at a PaneRail interface change. Use after touching any view, layout or screenshot - this machine has no Screen Recording permission, so screencapture returns wallpaper without windows and the app must draw itself off-screen instead.
+description: Look at a PaneRail interface change. Use after you change a view, a layout or a screenshot. This machine has no Screen Recording permission, so the app must draw itself off-screen.
 ---
 
-# Seeing the interface
+# Look at the interface
 
-`screencapture` here produces the desktop picture with **no windows in it** —
-the shell has no Screen Recording permission. Do not use it to check the app and
-do not conclude from an empty screenshot that nothing was drawn.
+`screencapture` gives you the desktop picture with no windows in it. The shell
+has no Screen Recording permission. Do not use it to check the app. An empty
+screenshot does not mean the app drew nothing.
 
-The app renders itself off-screen instead. Always open the resulting PNG and
-look at it. A zero exit code means a file was written, not that the layout is
-right.
+The app draws itself off-screen instead. Open the PNG and look at it. A zero
+exit code tells you that a file exists. It does not tell you that the layout is
+correct.
 
 ## Commands
 
 ```sh
 BIN=build/Build/Products/Debug/PaneRail.app/Contents/MacOS/PaneRail
-$BIN --render-preview  /tmp/rail.png [--dark]        # the rail, scripted data
-$BIN --render-settings /tmp/gen.png  [--dark]        # General tab
-$BIN --render-settings /tmp/adv.png  --advanced      # Advanced tab
-$BIN --render-strip    /tmp/strip.png [--dark]       # the horizontal layout
+$BIN --render-preview  /tmp/rail.png   [--dark]    # the rail of windows
+$BIN --render-settings /tmp/gen.png    [--dark]    # the General tab
+$BIN --render-settings /tmp/adv.png    --advanced  # the Advanced tab
+$BIN --render-glyphs   /tmp/glyphs.png [--dark]    # the glyph panel
 ```
 
-Rendering against a live application needs the Accessibility grant, so it runs
-from the installed copy through `open`:
+A render against a running application needs the Accessibility grant. Start it
+with `open`:
 
 ```sh
-pkill -f "PaneRail.app/Contents/MacOS/PaneRail"; sleep 1
+pkill -f "PaneRail.app/Contents/MacOS/PaneRail"; sleep 2
 open -n /Applications/PaneRail.app --args --render-live com.vivaldi.Vivaldi /tmp/live.png [--strip] [--dark]
-sleep 8
+sleep 10
 ```
 
-`make preview` refreshes every scripted shot in `docs/`; `make preview-rail
-APP_ID=...` refreshes the live ones.
+Start one render at a time. Stop the previous instance first. Two instances at
+once leave the second one writing nothing.
 
-## Traps that have actually cost time here
+`make preview` makes the scripted shots again. `make preview-rail APP_ID=...`
+makes the live ones again.
 
-**An unknown flag does not fail.** The app just launches and runs forever. A
-mistyped render flag hung a command for ten minutes. Check the flag exists in
-`DeveloperCommands.swift` before running it.
+## Traps
 
-**`timeout` does not exist on macOS.** A guard written with it fails with
-"command not found" and looks exactly like the render failing.
+**An unknown flag does not fail.** The app starts and runs forever. Check the
+flag in `DeveloperCommands.swift` before you use it.
 
-**Off-screen there is no window behind the view.** Dark-mode content lands on
-white unless the renderer supplies a backdrop. If a dark render looks broken,
-suspect the harness before the view.
+**`timeout` does not exist on macOS.** A command that uses it fails with
+"command not found". This looks like a failed render.
 
-**An app launched through `open` does not inherit the working directory.** A
-relative output path writes somewhere else, or nowhere, and the render looks
-like it silently failed. Pass absolute paths — `$(CURDIR)` in the Makefile.
-For the same reason a diagnostic launched this way must write its *failure* to a
-file too: its stdout goes nowhere, so a silent return is all the caller sees.
+**`open` does not pass the working directory to the app.** Give an absolute
+path. A relative path writes somewhere else. Use `$(CURDIR)` in the Makefile.
 
-**zsh does not word-split unquoted variables, unlike bash.** Building an
-argument list in a variable and passing it as `$args` hands the whole string
-over as one argument. Here that produced files named `strip-dark.png --strip
---dark` and ten minutes spent looking for a bug in the app. Pass arguments
-literally, or use `${=args}`.
+**The app discards stdout when `open` starts it.** A diagnostic must write its
+result to a file. It must write its failures to a file as well.
 
-**A missing SF Symbol draws nothing at all.** `Image(systemName:)` fails
-silently for a name that does not exist — `line.3.vertical` is one. If part of a
-view is simply absent, check the symbol name exists before debugging layout.
+**zsh does not split an unquoted variable into words.** bash does. Put the
+arguments in the command. Do not build them in a variable. This trap made files
+with names like `strip-dark.png --strip --dark`.
 
-## What this cannot tell you
+**A missing SF Symbol draws nothing.** `Image(systemName:)` fails without a
+message for a name that does not exist. `line.3.vertical` is one such name. If
+part of a view is absent, check the symbol name first.
 
-Rendering shows what a view looks like, never how it behaves. Clicks, drags,
-hovers and tooltips have to be tried by the user. Every interaction bug in this
-project — an invisible grip, a grip that drew but did not drag, tooltips that
-never appear — passed a visual check and a green test suite.
+## Limit
 
-After a change that touches interaction, install it and ask the user to try the
-specific gesture. Do not report interaction as working on the strength of tests.
+A render shows you the view. It tells you nothing about behaviour. Only the user
+can test a click, a drag or a hover.
+
+Install the build. Ask the user to try the gesture you changed. Every
+interaction fault in this project passed a render and a green test suite.

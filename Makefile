@@ -62,11 +62,17 @@ preview: build
 	$(DEBUG_APP)/Contents/MacOS/PaneRail --render-glyphs docs/strip-dark.png --dark
 	@rm -f default.profraw
 
+# Each render runs in its own instance, and the previous one must be gone
+# first: two of them at once leave the second writing nothing.
 preview-rail: install
+	@pkill -f "PaneRail.app/Contents/MacOS/PaneRail" || true
+	@sleep 2
 	open -n /Applications/PaneRail.app --args --render-live $(APP_ID) $(CURDIR)/docs/rail-light.png
-	sleep 6
+	@sleep 8
+	@pkill -f "PaneRail.app/Contents/MacOS/PaneRail" || true
+	@sleep 2
 	open -n /Applications/PaneRail.app --args --render-live $(APP_ID) $(CURDIR)/docs/rail-dark.png --dark
-	sleep 6
+	@sleep 8
 
 icons:
 	./Scripts/generate-icons.sh
