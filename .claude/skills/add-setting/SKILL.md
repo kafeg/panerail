@@ -1,67 +1,24 @@
 ---
 name: add-setting
-description: Add, rename or remove a PaneRail setting. Use for every change to a preference. A setting touches five places, and the place that is easy to forget fails without a message.
+description: Add, rename or remove a PaneRail setting. Use for every change to a preference. A setting touches five places, and the place that is easy to forget fails without a message. Not for a provider (add-provider) or for looking at the result (visual-check).
 ---
-
-# Add a setting
-
+# add-setting
 A setting is more than one edit. Do all five steps, in this order.
 
-## 1. The store
+## Rules
+- ⚠️ Never use `defaults.bool(forKey:)`. It gives `false` both for a setting that is absent and for a setting that is off. Read with `defaults.object(forKey:) as? T ?? fallback`.
+- ⚠️ Never assign a `@Published` property inside its own `didSet`. The assignment calls `didSet` again until the stack is full. Put the limit in the setter of a computed property and keep the value in private storage. See `width` and `minimumWindows`.
+- A computed property has no `$` projection: expose a publisher for it, as `widthPublisher` and `positionPublisher` do. Without a publisher the setting is stored and then ignored until something else causes a refresh.
+- Key names take the prefix `rail.`.
+- Three places hold the settings window height: `SettingsView`, `SettingsWindowController` and `PreviewRenderer`. They must agree.
+- Give each row one line of explanation with `hint(...)`. Change the hint with the value where the meaning changes. See `modeHint` and `positionHint`.
 
-File: `Sources/PaneRailKit/Preferences.swift`
-
-- Add a key to the `Key` enum. Use the prefix `rail.`.
-- Add a `@Published` property. Write to `defaults` in its `didSet`.
-- Read the default in `init` with `defaults.object(forKey:) as? T ?? fallback`.
-
-Do not use `defaults.bool(forKey:)`. It gives `false` for a setting that is
-absent and for a setting that is off.
-
-Do not assign a `@Published` property inside its own `didSet`. The assignment
-calls `didSet` again until the stack is full. This stopped the whole test runner
-once. Put the limit in the setter of a computed property, and keep the value in
-private storage. See `width` and `minimumWindows`.
-
-A computed property has no `$` projection. Expose a publisher for it, as
-`widthPublisher` and `positionPublisher` do. Without a publisher the setting is
-stored and then ignored until something else causes a refresh. "Reset to right
-edge" shipped broken for this reason.
-
-## 2. The diagnostics
-
-File: `Sources/PaneRail/PreferencesDiagnostics.swift`
-
-Add the value to `dump`. Add a value that differs from the default to
-`writeProbeValues`.
-
-This step is the usual omission. The setting then stays outside the round-trip
-check, and nobody sees that it never persisted.
-
-## 3. The interface
-
-File: `Sources/PaneRail/UI/GeneralSettingsView.swift` for a normal setting.
-File: `Sources/PaneRail/UI/AdvancedSettingsView.swift` for a setting that
-depends on another application's internals.
-
-Give each row one line of explanation with `hint(...)`. Change the hint with the
-value where the meaning changes. See `modeHint` and `positionHint`.
-
-A new row usually makes the window taller. Three places hold the height:
-`SettingsView`, `SettingsWindowController` and `PreviewRenderer`. They must
-agree. Then look at the result with the `visual-check` skill. Content has
-reached the bottom edge twice.
-
-## 4. The tests
-
-File: `Tests/PaneRailKitTests/PreferencesTests.swift`
-
-- Test the default.
-- Add the value to `testValuesSurviveARestart`.
-- Test each limit, on assignment and on a value read back from a damaged domain.
-
-## 5. The round trip
-
+## Procedure
+1. **The store** — `Sources/PaneRailKit/Preferences.swift`. Add a key to the `Key` enum, add a `@Published` property, write to `defaults` in its `didSet`, read the default in `init`.
+2. **The diagnostics** — `Sources/PaneRail/PreferencesDiagnostics.swift`. Add the value to `dump`, and a value that differs from the default to `writeProbeValues`. This step is the usual omission: the setting then stays outside the round-trip check, and nobody sees that it never persisted.
+3. **The interface** — `Sources/PaneRail/UI/GeneralSettingsView.swift` for a normal setting, `AdvancedSettingsView.swift` for one that depends on another application's internals. A new row usually makes the window taller, so update all three heights, then look at the result with visual-check.
+4. **The tests** — `Tests/PaneRailKitTests/PreferencesTests.swift`. Test the default, add the value to `testValuesSurviveARestart`, test each limit both on assignment and on a value read back from a damaged domain.
+5. **The round trip.** One process writes, a second reads. The unit tests use their own suite, so they cannot catch a key that never reaches the real domain.
 ```sh
 make build
 BIN=build/Build/Products/Debug/PaneRail.app/Contents/MacOS/PaneRail
@@ -73,12 +30,17 @@ $BIN --preferences-dump
 defaults delete dev.kafeg.panerail
 defaults import dev.kafeg.panerail /tmp/prefs-backup.plist   # give them back
 ```
+6. Update the settings table in `README.md`.
 
-One process writes. A second process reads. The unit tests use their own suite,
-so they cannot find a key that never reaches the real domain.
+## Gotchas
+- The test runner hangs and then dies → a `@Published` property assigned inside its own `didSet` → move the limit into a computed property's setter.
+- A setting is stored and has no effect until something else refreshes → a computed property with no publisher → expose one. "Reset to right edge" shipped broken for this reason.
+- A setting that is off behaves like one that was never set → `defaults.bool(forKey:)` → use `object(forKey:)` with an explicit fallback.
+- The round trip shows the setting missing, while the unit tests pass → it was never added to `dump` / `writeProbeValues` → add it in step 2.
+- Old keys survive the round trip → `defaults import` merges → delete the domain first.
+- Content reaches the bottom edge of the settings window → the three heights disagree → update all three, then look with visual-check. This has happened twice.
 
-`defaults import` merges. Delete the domain first, or old keys stay.
+## Boundaries
+- An application's internal states: add-provider. Looking at the window: visual-check. Installing and the Accessibility grant: permissions.
 
-## 6. Finally
-
-Update the settings table in `README.md`.
+<!-- style: ste80 -->
