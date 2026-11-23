@@ -18,10 +18,10 @@ import Foundation
 /// of it: Vivaldi can have several windows — a private one next to a normal one,
 /// or a second session — and a workspace switch applies to whichever is in front.
 ///
-/// - The active workspace is read back from the "Other Workspaces and Tabs"
-///   menu, which lists everything except the workspace in use; the one missing
-///   from it is the active one. When that cannot be established unambiguously,
-///   no row is highlighted rather than the wrong one.
+/// - The active workspace is read back from the window menu, which carries a tab
+///   list per workspace: the active one is whichever list holds the tab the
+///   window is showing. When that cannot be established unambiguously, no row
+///   is highlighted rather than the wrong one.
 public final class VivaldiRailProvider: RailItemProvider {
     public static let sectionID = "vivaldi.workspaces"
 

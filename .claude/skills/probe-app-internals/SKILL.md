@@ -12,7 +12,7 @@ The experiments run against the user's real applications. Do the least damaging 
 - ⚠️ Verify by effect, never by return value. Two silent failures live here: `AXPress` on a Vivaldi workspace menu item returns success and does nothing, because the item has no action until its menu opens; and Chromium ignores a modifier that is only a flag on a key event, so send the modifier as a real key-down and key-up.
 - ⚠️ The user's data stays out of the log. Print structure only — key names, types and counts. Report each match by index: write "workspace #3", not its name. The probe already has the list from the disk, so an index identifies the match.
 - Put the probe inside the application; do not drive the target from a shell. The probe gets the Accessibility grant, a shell command does not. See permissions for how to start it.
-- Suspect your check when it disagrees with the expected result. Chromium builds its menus again only when it shows them, so a menu read just after a switch reports the previous state.
+- Suspect your check when it disagrees with the expected result. Chromium rebuilds a menu when one of its own shortcuts acts, and not when the same thing is done in its interface, so a menu read after that reports the state from before — confidently, and indistinguishably from the truth. Anchor such a reading to something that is always current, like the window title.
 - A provider built on this must fall back to plain window switching when its assumptions fail, and report the reason, as the Advanced tab reports the profile read.
 
 ## Procedure
@@ -27,6 +27,8 @@ The experiments run against the user's real applications. Do the least damaging 
 - A modifier has no effect → it was set as a flag on a key event → send real key-down and key-up events.
 - The browser stops answering clicks → a menu was left open by a probe → never open menus.
 - The log contains the user's window titles or project names → values were printed instead of indexes → print structure and indexes only.
+- A title is never found among menu entries → entries are shortened to fit, cut in the middle as well as at the end, and the entry a list is showing carries a bullet in front → compare how the title begins and ends, after dropping the mark.
+- A cached element answers with nothing at all → the target rebuilt that menu → look it up again; handles higher up the tree survive it and answer freshly.
 
 ## Boundaries
 - Writing the provider: add-provider. Starting a build with the Accessibility grant: permissions. Looking at the resulting panel: visual-check.

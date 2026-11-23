@@ -72,11 +72,22 @@ assumed:
   that are merely set as flags on the key event. `Ctrl+Shift+1` selects the
   window's own tabs rather than a workspace, so the first workspace answers to
   the second digit — and only eight are reachable.
-- **The active workspace** is read from the "Other Workspaces and Tabs" menu,
-  which lists every workspace except the one in use. Only the menu bar is
-  walked and the submenu is cached, since Vivaldi carries a couple of thousand
-  menu items. The submenu is identified by its contents rather than its title,
-  so a localised Vivaldi still works.
+- **The active workspace** comes from the same window menu, which carries a tab
+  list per workspace: the ones it names as *other* each bring their own, and the
+  tabs of the workspace in use — pinned ones included, from a submenu of their
+  own — sit in the menu itself. The active workspace is whichever list holds the
+  tab the window is showing; the window title is the one part of this that is
+  always current. The absent workspace is *not* taken as the active one on its
+  own: Vivaldi rebuilds this menu when its own shortcut switches workspace, but
+  a switch made in its interface leaves the menu naming the previous workspace
+  as the one in use, and it reads as confidently as the truth. Menu entries are
+  shortened to fit — cut at the end or in the middle, with the tab a list is
+  showing marked by a bullet — so a tab is matched by how its title begins and
+  ends rather than by equality. The same page open in two workspaces highlights
+  nothing. Only the menu bar is walked and its elements cached, since Vivaldi
+  carries a couple of thousand menu items; the menu and the workspace list are
+  identified by their contents rather than their titles, so a localised Vivaldi
+  still works.
 - **Icons** are drawn by a deliberately restricted SVG reader: Vivaldi's glyphs
   use only paths and lines with absolute commands, so a small parser and Core
   Graphics do what a web view would otherwise do asynchronously and at much
