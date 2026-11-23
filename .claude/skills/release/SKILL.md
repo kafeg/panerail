@@ -10,7 +10,7 @@ Tag a change in behaviour, let CI publish it, then check what was published.
 - The main branch always holds the latest work. Anyone who needs it can build from source.
 - ⚠️ Read the version after the last commit. Each commit increases the count, so a number from before the commit is already wrong, and a wrong tag gives a release whose contents disagree with its name.
 - The version format is `<major>.<minor>.<commits>`. You choose the first two numbers in `project.yml`; `Scripts/stamp-version.sh` writes the commit count into the built `Info.plist`.
-- The tag message becomes part of the release notes. Write what changed for a user.
+- The workflow writes the notes itself (`--generate-notes`) and ignores the tag message, so put what changed for a user into the release once CI has published it: `gh release edit "v$(make version)" --notes-file …`, keeping the lines the workflow added.
 - Keep the sentence about the blocked first launch while builds have no notarisation.
 
 ## Procedure
